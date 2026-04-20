@@ -171,7 +171,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # --- Endpoint: Upload MD file and add questions to data.json ---
-@app.post("/upload_md")
+@app.post("/api/upload_md")
 async def upload_md(file: UploadFile = File(...)):
     if not file.filename.endswith(".md"):
         raise HTTPException(status_code=400, detail="Only .md files are supported.")
@@ -259,13 +259,13 @@ def format_dsa_feedback(data):
     </ul>
 </div>
 '''
-@app.post("/sync_questions")
+@app.post("/api/sync_questions")
 def api_sync_questions():
     sync_questions()
     return {"status": "Questions synced from DSA_Must_Solve_Problems.md to data.json."}
 
 # --- Updated API Logic for fetching questions ---
-@app.get("/questions", response_model=List[Question])
+@app.get("/api/questions", response_model=List[Question])
 def get_questions():
     data = load_data()
     for q in data:
@@ -288,7 +288,7 @@ def get_questions():
         q['difficulty'] = calculate_difficulty_from_time(q['logs'][-1]['time_taken'] if q['logs'] else 0)
     return data
 
-@app.post("/questions", response_model=Question)
+@app.post("/api/questions", response_model=Question)
 def add_question(q: Question):
     data = load_data()
     q.id = max([x['id'] for x in data], default=0) + 1
@@ -297,7 +297,7 @@ def add_question(q: Question):
     save_data(data)
     return q
 
-@app.put("/questions/{qid}", response_model=Question)
+@app.put("/api/questions/{qid}", response_model=Question)
 def update_question(qid: int, q: Question):
     data = load_data()
     for i, item in enumerate(data):
@@ -307,7 +307,7 @@ def update_question(qid: int, q: Question):
             return q
     raise HTTPException(status_code=404, detail="Question not found")
 
-@app.post("/questions/{qid}/log", response_model=Question)
+@app.post("/api/questions/{qid}/log", response_model=Question)
 def add_log(qid: int, log: dict):
     data = load_data()
     for q in data:
@@ -325,7 +325,7 @@ def add_log(qid: int, log: dict):
             return q
     raise HTTPException(status_code=404, detail="Question not found")
 
-@app.put("/questions/{qid}/status", response_model=Question)
+@app.put("/api/questions/{qid}/status", response_model=Question)
 def update_status(
     qid: int,
     category: str = Body(...),
@@ -342,7 +342,7 @@ def update_status(
             return q
     raise HTTPException(status_code=404, detail="Question not found")
 
-@app.post("/questions/{qid}/validate")
+@app.post("/api/questions/{qid}/validate")
 def validate_question(qid: int):
     data_list = load_data()
     question = next((q for q in data_list if q['id'] == qid), None)
