@@ -176,7 +176,11 @@ async def get_questions(db: AsyncSession, user_id: int):
         progress = progress_map.get(q.id)
         user_logs = logs_by_qid.get(q.id, [])
         d = _question_to_dict(q, progress, user_logs)
-        d["accuracy"] = calculate_accuracy(user_logs)
+        # Use AI-validated accuracy from progress when available; fall back to log-based
+        if progress is not None and progress.accuracy is not None:
+            d["accuracy"] = progress.accuracy
+        else:
+            d["accuracy"] = calculate_accuracy(user_logs)
         ease_f = progress.ease_factor if progress else 2.5
         interval = progress.interval_days if progress else 0
         d["interval_days"], d["ease_factor"] = get_spaced_repetition_values(user_logs, ease_f, interval)

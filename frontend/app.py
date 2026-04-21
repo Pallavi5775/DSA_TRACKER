@@ -11,6 +11,43 @@ API_URL = 'http://localhost:8000/api'
 st.set_page_config(layout="wide", page_title="DSA Revision Planner", page_icon="🎯")
 
 
+# ── AUTH PERSISTENCE via URL query params ─────────────────────────────────────
+# st.query_params are part of the URL so they survive page reloads automatically.
+# We write them on login and read them on every cold start.
+
+def _save_auth_qparams(token, username, user_id, role):
+    st.query_params["tok"] = token
+    st.query_params["usr"] = username
+    st.query_params["uid"] = str(user_id)
+    st.query_params["rol"] = role
+
+
+def _restore_auth_from_qparams():
+    tok = st.query_params.get("tok", "")
+    if not tok:
+        return
+    try:
+        r = requests.get(f"{API_URL}/auth/me",
+                         headers={"Authorization": f"Bearer {tok}"}, timeout=5)
+        if r.status_code == 200:
+            me = r.json()
+            st.session_state.token    = tok
+            st.session_state.username = me.get("username", st.query_params.get("usr", ""))
+            st.session_state.user_id  = me.get("id", int(st.query_params.get("uid", "0") or "0"))
+            st.session_state.role     = me.get("role", st.query_params.get("rol", "user"))
+            st.rerun()
+        else:
+            # Token expired or invalid — clear it
+            st.query_params.clear()
+    except Exception:
+        pass
+
+
+# Restore session on every cold start (session_state wiped on reload)
+if not st.session_state.get("token"):
+    _restore_auth_from_qparams()
+
+
 # ── AUTH HELPERS ──────────────────────────────────────────────────────────────
 def auth_headers():
     return {"Authorization": f"Bearer {st.session_state.get('token', '')}"}
@@ -67,6 +104,7 @@ def show_auth_page():
                             st.session_state.username = d["username"]
                             st.session_state.user_id  = d["user_id"]
                             st.session_state.role     = d["role"]
+                            _save_auth_qparams(d["access_token"], d["username"], d["user_id"], d["role"])
                             st.rerun()
                         else:
                             st.error(r.json().get("detail", "Login failed."))
@@ -91,6 +129,7 @@ def show_auth_page():
                             st.session_state.username = d["username"]
                             st.session_state.user_id  = d["user_id"]
                             st.session_state.role     = d["role"]
+                            _save_auth_qparams(d["access_token"], d["username"], d["user_id"], d["role"])
                             st.rerun()
                         else:
                             st.error(r.json().get("detail", "Registration failed."))
@@ -107,6 +146,7 @@ st.markdown("""
 html, body, [data-testid="stAppViewContainer"] {
     background: #faf5ff !important;
     font-family: 'Inter','Segoe UI',sans-serif;
+    font-size: 17px !important;
 }
 .block-container { padding-top: 1.6rem !important; }
 
@@ -133,7 +173,7 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 [data-testid="stTabs"] [role="tab"] {
-    font-weight: 600; color: #9ca3af; font-size: .85em;
+    font-weight: 600; color: #9ca3af; font-size: .9em;
 }
 [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
     color: #7c3aed !important;
@@ -144,7 +184,7 @@ html, body, [data-testid="stAppViewContainer"] {
     border-radius: 10px !important;
     border-color: #ede9fe !important;
     background: #fff !important;
-    font-size: .84em !important;
+    font-size: .9em !important;
 }
 
 /* ── Sidebar ── */
@@ -165,7 +205,7 @@ html, body, [data-testid="stAppViewContainer"] {
     border: 1px solid #3d1a72 !important;
     color: #e9d5ff !important;
     border-radius: 10px !important;
-    font-size: .87em !important;
+    font-size: .92em !important;
 }
 [data-testid="stSidebar"] textarea:focus,
 [data-testid="stSidebar"] input:focus {
@@ -175,7 +215,7 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] .stButton > button {
     border-radius: 10px !important;
     font-weight: 600 !important;
-    font-size: .84em !important;
+    font-size: .9em !important;
 }
 [data-testid="stSidebar"] [data-testid="baseButton-primary"] > button {
     background: linear-gradient(135deg,#7c3aed,#db2777) !important;
@@ -426,6 +466,7 @@ with hdr_right:
         unsafe_allow_html=True,
     )
     if st.button("Logout", key="logout_btn", use_container_width=True):
+        st.query_params.clear()
         for k in ['token', 'username', 'user_id', 'role', 'active_qid', 'start_timestamp']:
             st.session_state.pop(k, None)
         st.rerun()
@@ -436,6 +477,33 @@ df = pd.DataFrame(questions) if questions else pd.DataFrame()
 is_admin = st.session_state.get('role', 'user') == 'admin'
 tab_labels = ["📋 Questions", "📅 Calendar", "⚡ Activity"] + (["➕ Add Questions"] if is_admin else [])
 tabs = st.tabs(tab_labels)
+
+# Persist active tab across reloads via ?tab=N in the URL
+st.markdown("""
+<script>
+(function() {
+    function getTabParam() {
+        return parseInt(new URLSearchParams(window.parent.location.search).get('tab') || '0');
+    }
+    function setTabParam(idx) {
+        const url = new URL(window.parent.location);
+        url.searchParams.set('tab', idx);
+        window.parent.history.replaceState({}, '', url);
+    }
+    function activate() {
+        const tabEls = window.parent.document.querySelectorAll('[data-testid="stTabs"] [role="tab"]');
+        if (!tabEls.length) { setTimeout(activate, 150); return; }
+        const idx = getTabParam();
+        if (idx > 0 && tabEls[idx]) tabEls[idx].click();
+        tabEls.forEach((t, i) => t.addEventListener('click', () => setTabParam(i), { once: false }));
+    }
+    // Re-attach on every Streamlit re-run
+    if (document.readyState === 'complete') activate();
+    else window.addEventListener('load', activate);
+    setTimeout(activate, 300);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 0 — QUESTIONS
@@ -517,14 +585,21 @@ with tabs[0]:
 
             due_badge = badge_html("⚠ Due", "#ffe4e6", "#be123c") if is_due else ""
 
+            acc_col   = "#16a34a" if acc_val >= 80 else "#d97706" if acc_val >= 60 else "#db2777"
+            acc_bg    = "#dcfce7" if acc_val >= 80 else "#fef3c7" if acc_val >= 60 else "#fce7f3"
             card_html = (
                 f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:16px;'
                 f'padding:16px 20px;margin-bottom:10px;box-shadow:0 1px 6px rgba(219,39,119,.04);">'
-                f'  <div style="margin-bottom:7px;">'
-                f'    {badge_html(row["pattern"],"#ede9fe","#5b21b6")}'
-                f'    {coverage_badge(cs)}'
-                f'    {revision_badge(rs)}'
-                f'    {due_badge}'
+                f'  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;">'
+                f'    <div style="display:flex;flex-wrap:wrap;gap:4px;">'
+                f'      {badge_html(row["pattern"],"#ede9fe","#5b21b6")}'
+                f'      {coverage_badge(cs)}'
+                f'      {revision_badge(rs)}'
+                f'      {due_badge}'
+                f'    </div>'
+                f'    <div style="background:{acc_bg};border-radius:20px;padding:3px 10px;'
+                f'    font-size:.82em;font-weight:800;color:{acc_col};white-space:nowrap;'
+                f'    border:1.5px solid {acc_col}22;">🎯 {acc_val:.0f}%</div>'
                 f'  </div>'
                 f'  <div style="font-weight:700;font-size:.97em;color:#1e1b4b;margin-bottom:8px;">{row["title"]}</div>'
                 f'  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
@@ -612,7 +687,7 @@ with tabs[1]:
                 f'  <span style="color:{date_col};font-weight:700;font-size:.75em;min-width:70px;">📅 {nr}</span>'
                 f'  <span style="color:#1e1b4b;font-weight:600;font-size:.84em;flex:1;">{q["title"]}{ov_tag}</span>'
                 f'  {revision_badge(rs)}'
-                f'  <span style="font-size:.75em;color:#7c3aed;font-weight:600;">{q.get("accuracy") or 0:.0f}%</span>'
+                f'  <span style="font-size:.78em;font-weight:800;color:{"#16a34a" if (q.get("accuracy") or 0)>=80 else "#d97706" if (q.get("accuracy") or 0)>=60 else "#db2777"};">🎯 {q.get("accuracy") or 0:.0f}%</span>'
                 f'</div>',
                 unsafe_allow_html=True
             )
