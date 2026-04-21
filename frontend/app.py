@@ -1,230 +1,920 @@
-# --- Helper: Load data.json and get question by qid ---
-import json
-import os
-def get_question_by_qid(qid):
-    data_path = os.path.join(os.path.dirname(__file__), '../backend/data.json')
-    with open(data_path, 'r', encoding='utf-8') as f:
-        questions = json.load(f)
-    return next((q for q in questions if q['id'] == qid), None)
+# -*- coding: utf-8 -*-
+import calendar as cal_lib
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import pandas as pd
 import time
-from streamlit_autorefresh import st_autorefresh
 
 API_URL = 'http://localhost:8000/api'
 
-# --- Configuration ---
-st.set_page_config(layout="wide", page_title="DSA Revision Planner")
+st.set_page_config(layout="wide", page_title="DSA Revision Planner", page_icon="🎯")
 
-# --- Custom Styling ---
-st.markdown("""
+
+# ── AUTH HELPERS ──────────────────────────────────────────────────────────────
+def auth_headers():
+    return {"Authorization": f"Bearer {st.session_state.get('token', '')}"}
+
+
+def api_post_auth(path, payload):
+    return requests.post(f"{API_URL}{path}", json=payload, timeout=8)
+
+
+def show_auth_page():
+    """Full-screen login / register page."""
+    st.markdown("""
     <style>
-    .stMetric { background: #f3f3fa; padding: 15px; border-radius: 10px; border: 1px solid #eebbc3; }
-    [data-testid="stSidebar"] {
-        background-color: #fff !important;
-        border-right: 1px solid #eebbc3;
-        color: #111 !important;
+    html, body, [data-testid="stAppViewContainer"] { background: #faf5ff !important; }
+    .auth-wrap {
+        max-width: 420px; margin: 60px auto 0; padding: 36px 40px;
+        background: #fff; border: 1.5px solid #ede9fe; border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(124,58,237,.12);
     }
-    [data-testid="stSidebar"] * {
-        color: #111 !important;
+    .auth-logo { font-size: 2.2em; text-align: center; margin-bottom: 4px; }
+    .auth-title {
+        text-align: center; font-size: 1.5em; font-weight: 800;
+        background: linear-gradient(135deg,#7c3aed,#db2777);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 2px;
     }
-    .question-card {
-        background: #f3f3fa; padding: 10px; border-radius: 8px; 
-        margin-bottom: 5px; border: 1px solid #2d334a;
-    }
+    .auth-sub { text-align:center; color:#a78bfa; font-size:.85em; margin-bottom:24px; }
     </style>
+    """, unsafe_allow_html=True)
+
+    _, col, _ = st.columns([1, 1.8, 1])
+    with col:
+        st.markdown(
+            '<div class="auth-logo">🎯</div>'
+            '<div class="auth-title">DSA Revision Planner</div>'
+            '<div class="auth-sub">Track · Practice · Master</div>',
+            unsafe_allow_html=True,
+        )
+
+        tab_login, tab_reg = st.tabs(["🔐 Login", "✨ Register"])
+
+        with tab_login:
+            username = st.text_input("Username", key="li_user", placeholder="your username")
+            password = st.text_input("Password", key="li_pass", placeholder="••••••••", type="password")
+            if st.button("Login", type="primary", use_container_width=True, key="li_btn"):
+                if not username or not password:
+                    st.warning("Please fill in all fields.")
+                else:
+                    try:
+                        r = api_post_auth("/auth/login", {"username": username, "password": password})
+                        if r.status_code == 200:
+                            d = r.json()
+                            st.session_state.token    = d["access_token"]
+                            st.session_state.username = d["username"]
+                            st.session_state.user_id  = d["user_id"]
+                            st.session_state.role     = d["role"]
+                            st.rerun()
+                        else:
+                            st.error(r.json().get("detail", "Login failed."))
+                    except Exception as e:
+                        st.error(f"Cannot reach server: {e}")
+
+        with tab_reg:
+            ru = st.text_input("Username", key="re_user", placeholder="choose a username")
+            re = st.text_input("Email",    key="re_email", placeholder="you@example.com")
+            rp = st.text_input("Password", key="re_pass", placeholder="••••••••", type="password")
+            if st.button("Create Account", type="primary", use_container_width=True, key="re_btn"):
+                if not ru or not re or not rp:
+                    st.warning("Please fill in all fields.")
+                elif len(rp) < 6:
+                    st.warning("Password must be at least 6 characters.")
+                else:
+                    try:
+                        r = api_post_auth("/auth/register", {"username": ru, "email": re, "password": rp})
+                        if r.status_code == 200:
+                            d = r.json()
+                            st.session_state.token    = d["access_token"]
+                            st.session_state.username = d["username"]
+                            st.session_state.user_id  = d["user_id"]
+                            st.session_state.role     = d["role"]
+                            st.rerun()
+                        else:
+                            st.error(r.json().get("detail", "Registration failed."))
+                    except Exception as e:
+                        st.error(f"Cannot reach server: {e}")
+
+    st.stop()  # don't render the main app
+
+# ── GLOBAL CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+html, body, [data-testid="stAppViewContainer"] {
+    background: #faf5ff !important;
+    font-family: 'Inter','Segoe UI',sans-serif;
+}
+.block-container { padding-top: 1.6rem !important; }
+
+[data-testid="metric-container"] {
+    background: #fff !important;
+    border: 1.5px solid #ede9fe !important;
+    border-radius: 16px !important;
+    padding: 18px 22px !important;
+    box-shadow: 0 2px 8px rgba(124,58,237,.08) !important;
+}
+[data-testid="stMetricLabel"] p {
+    color: #7c3aed !important;
+    font-size: .72em !important;
+    font-weight: 700 !important;
+    letter-spacing: .8px !important;
+    text-transform: uppercase !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 1.9em !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg,#7c3aed,#db2777) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+[data-testid="stTabs"] [role="tab"] {
+    font-weight: 600; color: #9ca3af; font-size: .85em;
+}
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: #7c3aed !important;
+    border-bottom: 2.5px solid #7c3aed !important;
+}
+
+[data-testid="stSelectbox"] > div > div {
+    border-radius: 10px !important;
+    border-color: #ede9fe !important;
+    background: #fff !important;
+    font-size: .84em !important;
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: #1e0b38 !important;
+    border-right: 1px solid #2d1457 !important;
+}
+[data-testid="stSidebar"] > div { padding-top: .8rem; }
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label { color: #e2d9f3 !important; }
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 { color: #f3e8ff !important; }
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] input {
+    background: #2a1050 !important;
+    border: 1px solid #3d1a72 !important;
+    color: #e9d5ff !important;
+    border-radius: 10px !important;
+    font-size: .87em !important;
+}
+[data-testid="stSidebar"] textarea:focus,
+[data-testid="stSidebar"] input:focus {
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 0 2px rgba(168,85,247,.25) !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: .84em !important;
+}
+[data-testid="stSidebar"] [data-testid="baseButton-primary"] > button {
+    background: linear-gradient(135deg,#7c3aed,#db2777) !important;
+    border: none !important; color: #fff !important;
+    box-shadow: 0 2px 8px rgba(124,58,237,.35) !important;
+}
+</style>
 """, unsafe_allow_html=True)
 
-# --- API Helper Functions ---
+
+# ── HELPERS ───────────────────────────────────────────────────────────────────
+def fetch_activity():
+    try:
+        r = requests.get(f"{API_URL}/activity", headers=auth_headers(), timeout=8)
+        return r.json() if r.status_code == 200 else {}
+    except:
+        return {}
+
+
+def build_heatmap_html(sessions_by_date: dict, weeks: int = 16) -> str:
+    from datetime import date as d_type, timedelta as td
+    today = d_type.today()
+    start = today - td(days=today.weekday() + 7 * (weeks - 1))
+
+    def cell_color(n):
+        if n == 0:   return "#f0ebff"
+        if n == 1:   return "#ddd6fe"
+        if n == 2:   return "#a78bfa"
+        if n == 3:   return "#7c3aed"
+        return "#4c1d95"
+
+    day_labels = ["Mon","","Wed","","Fri","","Sun"]
+
+    # left day-name column
+    day_col = "".join(
+        f'<div style="height:13px;line-height:13px;font-size:.6em;color:#a78bfa;'
+        f'text-align:right;padding-right:4px;margin-bottom:2px;">{l}</div>'
+        for l in day_labels
+    )
+
+    # week columns
+    week_cols = ""
+    cur = start
+    prev_month = None
+    month_labels = ""
+    col_idx = 0
+
+    while cur <= today:
+        # month label
+        if cur.month != prev_month:
+            left_px = col_idx * 15
+            month_labels += (
+                f'<span style="position:absolute;left:{left_px}px;'
+                f'font-size:.6em;color:#7c3aed;font-weight:600;">'
+                f'{cur.strftime("%b")}</span>'
+            )
+            prev_month = cur.month
+
+        col = ""
+        for dow in range(7):
+            day = cur + td(days=dow)
+            if day > today:
+                col += '<div style="height:13px;margin-bottom:2px;"></div>'
+                continue
+            n     = sessions_by_date.get(day.strftime("%Y-%m-%d"), 0)
+            bg    = cell_color(n)
+            tip   = f"{day.strftime('%b %d')}: {n} session{'s' if n!=1 else ''}"
+            is_today = day == today
+            border = "border:1.5px solid #7c3aed;" if is_today else ""
+            col += (
+                f'<div title="{tip}" style="width:11px;height:11px;border-radius:3px;'
+                f'background:{bg};{border}margin-bottom:2px;"></div>'
+            )
+        week_cols += f'<div style="display:flex;flex-direction:column;margin-right:2px;">{col}</div>'
+        cur += td(days=7)
+        col_idx += 1
+
+    return (
+        f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:16px;'
+        f'padding:18px 20px;box-shadow:0 2px 8px rgba(124,58,237,.06);">'
+        f'<div style="font-size:.7em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;'
+        f'color:#7c3aed;margin-bottom:10px;">Activity Heatmap — last {weeks} weeks</div>'
+        f'<div style="display:flex;align-items:flex-start;gap:0;">'
+        f'  <div style="margin-top:12px;">{day_col}</div>'
+        f'  <div style="position:relative;">'
+        f'    <div style="position:relative;height:14px;margin-bottom:4px;">{month_labels}</div>'
+        f'    <div style="display:flex;">{week_cols}</div>'
+        f'  </div>'
+        f'</div>'
+        f'<div style="display:flex;align-items:center;gap:4px;margin-top:10px;">'
+        f'  <span style="font-size:.65em;color:#a78bfa;">Less</span>'
+        + "".join(f'<div style="width:10px;height:10px;border-radius:2px;background:{cell_color(i)};"></div>' for i in range(5))
+        + f'  <span style="font-size:.65em;color:#a78bfa;">More</span>'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def fetch_questions():
     try:
-        r = requests.get(f"{API_URL}/questions")
+        r = requests.get(f"{API_URL}/questions", headers=auth_headers(), timeout=8)
+        if r.status_code == 401:
+            st.session_state.pop('token', None)
+            st.rerun()
         return r.json() if r.status_code == 200 else []
-    except: return []
+    except:
+        return []
 
-def update_question_api(qid, payload):
-    try:
-        r = requests.put(f"{API_URL}/questions/{qid}", json=payload)
-        return r.status_code == 200
-    except: return False
 
-def sync_questions():
-    try:
-        r = requests.post(f"{API_URL}/sync_questions")
-        return r.status_code == 200
-    except: return False
+def badge_html(label, bg, color):
+    return (
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:20px;'
+        f'font-size:.68em;font-weight:700;letter-spacing:.5px;text-transform:uppercase;'
+        f'background:{bg};color:{color};margin-right:4px;">{label}</span>'
+    )
 
-# --- App Logic ---
-st.title("🎯 DSA Revision Planner")
 
-# Initialize State
-if 'active_qid' not in st.session_state:
-    st.session_state.active_qid = None
+def coverage_badge(cs):
+    return badge_html(cs, "#fce7f3", "#9d174d") if cs == "Covered" else badge_html(cs, "#f5f3ff", "#6d28d9")
+
+
+def revision_badge(rs):
+    cfg = {
+        "Mastered":   ("#ede9fe", "#5b21b6"),
+        "Needs Work": ("#fff1f2", "#be123c"),
+        "Pending":    ("#fdf4ff", "#a21caf"),
+    }
+    bg, col = cfg.get(rs, ("#fdf4ff", "#a21caf"))
+    return badge_html(rs, bg, col)
+
+
+def acc_bar_html(acc):
+    acc = acc or 0
+    grad = (
+        "linear-gradient(90deg,#22c55e,#86efac)" if acc >= 80
+        else "linear-gradient(90deg,#f59e0b,#fcd34d)" if acc >= 60
+        else "linear-gradient(90deg,#ec4899,#f9a8d4)"
+    )
+    col = "#22c55e" if acc >= 80 else "#f59e0b" if acc >= 60 else "#ec4899"
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:5px;">'
+        f'<span style="display:inline-block;background:#f5f3ff;border-radius:6px;height:6px;width:80px;vertical-align:middle;">'
+        f'<span style="display:block;height:6px;border-radius:6px;width:{min(acc,100):.0f}%;background:{grad};"></span></span>'
+        f'<span style="font-size:.78em;color:{col};font-weight:600;">{acc:.0f}%</span>'
+        f'</span>'
+    )
+
+
+def build_calendar(questions, year, month):
+    today = date.today()
+    today_str = today.strftime("%Y-%m-%d")
+    due_map = {}
+    for q in questions:
+        nr = q.get('next_revision')
+        if nr:
+            due_map.setdefault(nr, []).append(q)
+
+    headers = "".join(
+        f'<div style="text-align:center;font-size:.6em;font-weight:700;color:#a78bfa;'
+        f'letter-spacing:.8px;text-transform:uppercase;padding:4px 0 8px;">{d}</div>'
+        for d in ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    )
+
+    cells = ""
+    for week in cal_lib.monthcalendar(year, month):
+        for day in week:
+            if day == 0:
+                cells += '<div></div>'
+                continue
+            ds = f"{year}-{month:02d}-{day:02d}"
+            qs = due_map.get(ds, [])
+            is_today   = ds == today_str
+            is_overdue = ds < today_str and bool(qs)
+            is_due     = bool(qs)
+
+            if is_today:
+                bg, border = "linear-gradient(135deg,#7c3aed,#db2777)", "transparent"
+                dn_col = "#fff"
+            elif is_overdue:
+                bg, border = "#fff1f2", "#fca5a5"
+                dn_col = "#be123c"
+            elif is_due:
+                bg, border = "#faf5ff", "#c4b5fd"
+                dn_col = "#4c1d95"
+            else:
+                bg, border = "#faf5ff", "transparent"
+                dn_col = "#6b7280"
+
+            badge = ""
+            if qs:
+                dot_bg = "#ef4444" if is_overdue else "linear-gradient(135deg,#7c3aed,#db2777)"
+                badge = (
+                    f'<span style="display:inline-block;background:{dot_bg};color:#fff;'
+                    f'border-radius:10px;font-size:.58em;font-weight:700;padding:1px 5px;'
+                    f'margin-top:2px;">{len(qs)}</span>'
+                )
+
+            cells += (
+                f'<div style="background:{bg};border:1px solid {border};border-radius:10px;'
+                f'padding:6px 4px 4px;text-align:center;min-height:48px;display:flex;'
+                f'flex-direction:column;align-items:center;gap:2px;">'
+                f'<span style="font-size:.78em;color:{dn_col};font-weight:600;">{day}</span>'
+                f'{badge}</div>'
+            )
+
+    return (
+        f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:20px;'
+        f'padding:20px;box-shadow:0 4px 16px rgba(124,58,237,.08);">'
+        f'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">'
+        f'{headers}{cells}'
+        f'</div></div>'
+    )
+
+
+# ── AUTH GATE ─────────────────────────────────────────────────────────────────
+if not st.session_state.get('token'):
+    show_auth_page()
+
+# ── INIT ──────────────────────────────────────────────────────────────────────
+for key, val in [("active_qid", None), ("cal_year", datetime.now().year), ("cal_month", datetime.now().month)]:
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+# ── TOP BAR ───────────────────────────────────────────────────────────────────
+hdr_left, hdr_right = st.columns([0.75, 0.25])
+with hdr_left:
+    st.markdown(
+        '<h1 style="color:#3b0764;font-weight:800;letter-spacing:-1px;margin-bottom:0;">🎯 DSA Revision Planner</h1>'
+        '<p style="color:#a78bfa;font-size:.88em;font-weight:500;margin-bottom:1.2rem;">Track · Practice · Master</p>',
+        unsafe_allow_html=True,
+    )
+with hdr_right:
+    username = st.session_state.get('username', '')
+    role     = st.session_state.get('role', 'user')
+    is_admin = role == 'admin'
+
+    role_icon  = "👑" if is_admin else "👤"
+    role_label = "Admin" if is_admin else "User"
+    role_bg    = "linear-gradient(135deg,#7c3aed,#db2777)" if is_admin else "linear-gradient(135deg,#6366f1,#8b5cf6)"
+
+    st.markdown(
+        f'<div style="text-align:right;padding-top:10px;display:flex;justify-content:flex-end;gap:8px;align-items:center;">'
+        f'<span style="background:{role_bg};color:#fff;border-radius:20px;'
+        f'padding:4px 14px;font-size:.82em;font-weight:700;">{role_icon} {username}</span>'
+        f'<span style="background:#f3e8ff;color:#7c3aed;border-radius:20px;'
+        f'padding:3px 10px;font-size:.72em;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">{role_label}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("Logout", key="logout_btn", use_container_width=True):
+        for k in ['token', 'username', 'user_id', 'role', 'active_qid', 'start_timestamp']:
+            st.session_state.pop(k, None)
+        st.rerun()
 
 questions = fetch_questions()
-df = pd.DataFrame(questions)
+df = pd.DataFrame(questions) if questions else pd.DataFrame()
 
-# --- ONGOING CLOCK ---
-clock_placeholder = st.empty()
-clock_placeholder.markdown(f"### 🕒 {datetime.now().strftime('%H:%M:%S')}")
+is_admin = st.session_state.get('role', 'user') == 'admin'
+tab_labels = ["📋 Questions", "📅 Calendar", "⚡ Activity"] + (["➕ Add Questions"] if is_admin else [])
+tabs = st.tabs(tab_labels)
 
-# --- TABS ---
-tabs = st.tabs(["View Questions", "Add Questions"])
-
-# --- TAB 1: ADD QUESTIONS ---
-with tabs[1]:
-    st.subheader("Upload .md File to Add Questions")
-    uploaded_md = st.file_uploader("Choose a Markdown (.md) file", type=["md"])
-    upload_btn = st.button("Upload and Add Questions", disabled=uploaded_md is None)
-    if upload_btn and uploaded_md is not None:
-        with st.spinner("Uploading and processing file..."):
-            files = {"file": (uploaded_md.name, uploaded_md.getvalue(), "text/markdown")}
-            try:
-                resp = requests.post(f"{API_URL}/upload_md", files=files)
-                if resp.status_code == 200:
-                    result = resp.json()
-                    st.success(f"Added {result['added']} new questions. Total now: {result['total']}.")
-                    st.rerun()
-                else:
-                    st.error(f"Upload failed: {resp.text}")
-            except Exception as e:
-                st.error(f"Error uploading file: {e}")
-
-# --- TAB 0: VIEW QUESTIONS ---
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 0 — QUESTIONS
+# ══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
     if df.empty:
-        st.info("No problems found. Please Sync.")
+        st.info("No problems found. Upload a markdown file to get started.")
     else:
-        # Metrics
-        covered = len(df[df['coverage_status'] == 'Covered'])
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        week_str  = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+
+        # ── Metrics ──────────────────────────────────────────────────────────
+        covered  = len(df[df['coverage_status'] == 'Covered'])
+        due_ct   = len(df[df['next_revision'].fillna('9999') <= today_str])
+        mastered = len(df[df['revision_status'] == 'Mastered']) if 'revision_status' in df.columns else 0
+
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total", len(df))
-        m2.metric("Covered", covered)
-        m3.metric("Revision Due", len(df[df['next_revision'] <= datetime.now().strftime("%Y-%m-%d")]))
-        m4.metric("Success", f"{(covered/len(df)*100):.0f}%" if len(df)>0 else "0%")
+        m1.metric("Total",      len(df))
+        m2.metric("Covered",    covered)
+        m3.metric("Due Today",  due_ct)
+        m4.metric("Mastered",   mastered)
 
-        st.divider()
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-        # Filters
-        f1, f2 = st.columns(2)
-        pat_filter = f1.selectbox("Filter Pattern", ["All"] + sorted(df['pattern'].unique().tolist()))
-        
-        filtered = df.copy()
-        if pat_filter != "All": 
-            filtered = filtered[filtered['pattern'] == pat_filter]
+        # ── Filter panel (no split HTML — pure native widgets) ────────────────
+        st.markdown(
+            '<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:14px;'
+            'padding:14px 18px 2px;margin-bottom:14px;box-shadow:0 1px 4px rgba(124,58,237,.05);">'
+            '<span style="font-size:.65em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a78bfa;">🔎 Filters</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
-        # Display Loop
-        for _, row in filtered.iterrows():
-            with st.container():
-                cols = st.columns([0.8, 0.2])
-                with cols[0]:
-                    st.markdown(f"**{row['title']}** `{row['pattern']}`")
-                    st.caption(f"Status: {row['coverage_status']} | Accuracy: {row.get('accuracy', 0)}%")
-                with cols[1]:
-                    if st.button("Edit / Details", key=f"sel_{row['id']}"):
-                        st.session_state.active_qid = row['id']
-                        st.rerun()
+        fc1, fc2, fc3, fc4 = st.columns(4)
+        patterns   = ["All"] + sorted(df['pattern'].dropna().unique().tolist())
+        pat_filter = fc1.selectbox("Pattern",         patterns,                                     label_visibility="visible")
+        rev_filter = fc2.selectbox("Revision Status", ["All","Pending","Needs Work","Mastered"],    label_visibility="visible")
+        acc_filter = fc3.selectbox("Accuracy",        ["All","High ≥80%","Medium 60–79%","Low <60%"], label_visibility="visible")
+        due_filter = fc4.selectbox("Due",             ["All","Due Today","Due This Week","Overdue"], label_visibility="visible")
 
-# --- SIDEBAR LOGIC ---
-if st.session_state.active_qid:
-    # Initialize the start time only once per session
-    if 'start_timestamp' not in st.session_state:
-        st.session_state.start_timestamp = time.time()
+        fc5, fc6, _, _ = st.columns(4)
+        cov_filter = fc5.selectbox("Coverage", ["All","Covered","Not Covered"], label_visibility="visible")
+        sort_by    = fc6.selectbox("Sort By",   ["Default","Accuracy ↑","Accuracy ↓","Next Revision ↑"], label_visibility="visible")
 
-    # Calculate duration
-    elapsed = int(time.time() - st.session_state.start_timestamp)
-    mins, secs = divmod(elapsed, 60)
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
-    # Get current question data
-    q = next((item for item in questions if item['id'] == st.session_state.active_qid), None)
+        # ── Apply filters ─────────────────────────────────────────────────────
+        flt = df.copy()
+        flt['accuracy']      = flt['accuracy'].fillna(0)
+        flt['next_revision'] = flt['next_revision'].fillna('9999-12-31')
 
-    if q:
+        if pat_filter != "All":               flt = flt[flt['pattern'] == pat_filter]
+        if rev_filter != "All":               flt = flt[flt['revision_status'] == rev_filter]
+        if cov_filter != "All":               flt = flt[flt['coverage_status'] == cov_filter]
+        if acc_filter == "High ≥80%":         flt = flt[flt['accuracy'] >= 80]
+        elif acc_filter == "Medium 60–79%":   flt = flt[(flt['accuracy'] >= 60) & (flt['accuracy'] < 80)]
+        elif acc_filter == "Low <60%":        flt = flt[flt['accuracy'] < 60]
+        if due_filter == "Due Today":         flt = flt[flt['next_revision'] <= today_str]
+        elif due_filter == "Due This Week":   flt = flt[flt['next_revision'] <= week_str]
+        elif due_filter == "Overdue":         flt = flt[flt['next_revision'] < today_str]
+        if sort_by == "Accuracy ↑":           flt = flt.sort_values('accuracy', ascending=True)
+        elif sort_by == "Accuracy ↓":         flt = flt.sort_values('accuracy', ascending=False)
+        elif sort_by == "Next Revision ↑":    flt = flt.sort_values('next_revision', ascending=True)
 
-        with st.sidebar:
-            st.markdown(f"## 📝 {q['title']}")
-            st.metric("⏱️ Session Timer", f"{mins:02d}:{secs:02d}")
+        st.markdown(
+            f'<p style="font-size:.78em;color:#a78bfa;font-weight:600;margin-bottom:8px;">'
+            f'Showing {len(flt)} of {len(df)} problems</p>',
+            unsafe_allow_html=True
+        )
 
-            # --- Load the latest question object from data.json and display up-to-date fields ---
-            qid = q['id']
-            q_latest = get_question_by_qid(qid)
+        # ── Question cards ────────────────────────────────────────────────────
+        for _, row in flt.iterrows():
+            cs       = row.get('coverage_status', 'Not Covered')
+            rs       = row.get('revision_status', 'Pending')
+            acc_val  = float(row.get('accuracy') or 0)
+            next_rev = str(row.get('next_revision') or '—').replace('9999-12-31', '—')
+            total_t  = int(row.get('total_time_spent') or 0)
+            is_due   = next_rev != '—' and next_rev <= today_str
+
+            due_badge = badge_html("⚠ Due", "#ffe4e6", "#be123c") if is_due else ""
+
+            card_html = (
+                f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:16px;'
+                f'padding:16px 20px;margin-bottom:10px;box-shadow:0 1px 6px rgba(219,39,119,.04);">'
+                f'  <div style="margin-bottom:7px;">'
+                f'    {badge_html(row["pattern"],"#ede9fe","#5b21b6")}'
+                f'    {coverage_badge(cs)}'
+                f'    {revision_badge(rs)}'
+                f'    {due_badge}'
+                f'  </div>'
+                f'  <div style="font-weight:700;font-size:.97em;color:#1e1b4b;margin-bottom:8px;">{row["title"]}</div>'
+                f'  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+                f'    <span>{acc_bar_html(acc_val)}</span>'
+                f'    <span style="font-size:.77em;color:#6b7280;">📅 {next_rev}</span>'
+                f'    <span style="font-size:.77em;color:#6b7280;">⏱ {total_t}m</span>'
+                f'  </div>'
+                f'</div>'
+            )
+
+            col_card, col_btn = st.columns([0.84, 0.16])
+            with col_card:
+                st.markdown(card_html, unsafe_allow_html=True)
+            with col_btn:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Practice →", key=f"sel_{row['id']}", use_container_width=True):
+                    st.session_state.active_qid = int(row['id'])
+                    if 'start_timestamp' in st.session_state:
+                        del st.session_state.start_timestamp
+                    st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 1 — CALENDAR
+# ══════════════════════════════════════════════════════════════════════════════
+with tabs[1]:
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    nav_l, nav_m, nav_r = st.columns([0.1, 0.8, 0.1])
+    if nav_l.button("◀", key="cal_prev", use_container_width=True):
+        if st.session_state.cal_month == 1:
+            st.session_state.cal_month = 12; st.session_state.cal_year -= 1
+        else:
+            st.session_state.cal_month -= 1
+        st.rerun()
+
+    nav_m.markdown(
+        f'<div style="text-align:center;font-size:1.15em;font-weight:800;'
+        f'background:linear-gradient(135deg,#7c3aed,#db2777);'
+        f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;padding-top:5px;">'
+        f'{cal_lib.month_name[st.session_state.cal_month]} {st.session_state.cal_year}</div>',
+        unsafe_allow_html=True
+    )
+    if nav_r.button("▶", key="cal_next", use_container_width=True):
+        if st.session_state.cal_month == 12:
+            st.session_state.cal_month = 1; st.session_state.cal_year += 1
+        else:
+            st.session_state.cal_month += 1
+        st.rerun()
+
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown(build_calendar(questions, st.session_state.cal_year, st.session_state.cal_month), unsafe_allow_html=True)
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+    # ── Revision list for month ───────────────────────────────────────────────
+    yr, mo = st.session_state.cal_year, st.session_state.cal_month
+    m_start = f"{yr}-{mo:02d}-01"
+    m_end   = f"{yr}-{mo:02d}-{cal_lib.monthrange(yr, mo)[1]:02d}"
+    month_qs = sorted(
+        [q for q in questions if q.get('next_revision') and m_start <= q['next_revision'] <= m_end],
+        key=lambda q: q['next_revision']
+    )
+
+    st.markdown(
+        f'<p style="font-size:.75em;font-weight:700;color:#a78bfa;letter-spacing:.8px;'
+        f'text-transform:uppercase;margin-bottom:10px;">Revisions this month — {len(month_qs)} problems</p>',
+        unsafe_allow_html=True
+    )
+
+    if not month_qs:
+        st.markdown('<p style="color:#c4b5fd;font-size:.88em;">No revisions scheduled this month.</p>', unsafe_allow_html=True)
+    else:
+        for q in month_qs:
+            nr         = q['next_revision']
+            is_over    = nr < today_str
+            row_bg     = "#fff1f2" if is_over else "#fff"
+            row_border = "#fca5a5" if is_over else "#ede9fe"
+            date_col   = "#be123c" if is_over else "#7c3aed"
+            ov_tag     = ' <span style="color:#be123c;font-size:.7em;font-weight:700;">⚠ OVERDUE</span>' if is_over else ""
+            rs         = q.get('revision_status', 'Pending')
+
             st.markdown(
-                f"""
-                <div style='font-size:0.95em; background:#f8f8fa; border-radius:6px; padding:8px 12px; margin:6px 0; border:1px solid #eebbc3;'>
-                    <b>Status:</b> {q_latest.get('coverage_status', '')}<br>
-                    <b>Revision:</b> {q_latest.get('revision_status', '')}<br>
-                    <b>Next:</b> {q_latest.get('next_revision', '')}<br>
-                    <b>EF:</b> {q_latest.get('ease_factor', '')} | <b>Interval:</b> {q_latest.get('interval_days', '')}d<br>
-                    <b>Time:</b> {q_latest.get('total_time_spent', '')}m | <b>Acc:</b> {q_latest.get('accuracy', 0)}%<br>
-                    <b>Diff:</b> {q_latest.get('difficulty', '')}<br>
-                    <span style='color:#b22222'>{q_latest.get('suggestions', '')}</span>
-                </div>
-                """,
+                f'<div style="display:flex;align-items:center;gap:10px;background:{row_bg};'
+                f'border:1px solid {row_border};border-radius:10px;padding:9px 14px;margin-bottom:6px;">'
+                f'  <span style="color:{date_col};font-weight:700;font-size:.75em;min-width:70px;">📅 {nr}</span>'
+                f'  <span style="color:#1e1b4b;font-weight:600;font-size:.84em;flex:1;">{q["title"]}{ov_tag}</span>'
+                f'  {revision_badge(rs)}'
+                f'  <span style="font-size:.75em;color:#7c3aed;font-weight:600;">{q.get("accuracy") or 0:.0f}%</span>'
+                f'</div>',
                 unsafe_allow_html=True
             )
 
-            # Use unique keys for text areas to prevent state loss during refresh
-            new_logic = st.text_area("Logic", value=q.get('logic', ''), key="logic_input")
-            new_code = st.text_area("Code", value=q.get('code', ''), key="code_input")
 
-            # Log Mini-Section inside Sidebar
-            st.markdown("### 🚀 Log Session")
-            # log_time = st.number_input("Mins", 1, 120, 20)
-            # log_diff = st.slider("Diff (1-5)", 1, 5, 3)
-            # log_correct = st.checkbox("Solved correctly?", value=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 2 — ACTIVITY
+# ══════════════════════════════════════════════════════════════════════════════
+with tabs[2]:
+    act = fetch_activity()
+    sbd = act.get("sessions_by_date", {})
 
+    # ── Stat cards ────────────────────────────────────────────────────────────
+    def stat_card(icon, label, value, sub="", grad="linear-gradient(135deg,#7c3aed,#db2777)"):
+        return (
+            f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:16px;'
+            f'padding:18px 20px;box-shadow:0 2px 8px rgba(124,58,237,.07);text-align:center;">'
+            f'  <div style="font-size:1.6em;margin-bottom:4px;">{icon}</div>'
+            f'  <div style="font-size:.65em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#a78bfa;">{label}</div>'
+            f'  <div style="font-size:2em;font-weight:800;background:{grad};-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;">{value}</div>'
+            f'  <div style="font-size:.72em;color:#6b7280;margin-top:2px;">{sub}</div>'
+            f'</div>'
+        )
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.markdown(stat_card("🔥", "Streak",          f'{act.get("streak_days", 0)}d',  "days in a row"), unsafe_allow_html=True)
+    c2.markdown(stat_card("📅", "Today",            act.get("today_sessions", 0),     f'{act.get("today_time_minutes", 0)}m spent'), unsafe_allow_html=True)
+    c3.markdown(stat_card("📆", "This Week",        act.get("weekly_sessions", 0),    "sessions", "linear-gradient(135deg,#6366f1,#a855f7)"), unsafe_allow_html=True)
+    c4.markdown(stat_card("🎯", "Total Sessions",   act.get("total_sessions", 0),     "all time",  "linear-gradient(135deg,#db2777,#f97316)"), unsafe_allow_html=True)
+    c5.markdown(stat_card("⏱", "Total Time",       f'{act.get("total_time_minutes",0)}m', "practiced", "linear-gradient(135deg,#0ea5e9,#6366f1)"), unsafe_allow_html=True)
+
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+    # ── Heatmap ───────────────────────────────────────────────────────────────
+    st.markdown(build_heatmap_html(sbd), unsafe_allow_html=True)
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+    # ── Feed + Pattern chart ──────────────────────────────────────────────────
+    feed_col, chart_col = st.columns([0.58, 0.42])
+
+    with feed_col:
+        st.markdown(
+            '<div style="font-size:.7em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;'
+            'color:#7c3aed;margin-bottom:10px;">📋 Recent Sessions</div>',
+            unsafe_allow_html=True
+        )
+        recent = act.get("recent_sessions", [])
+        if not recent:
+            st.markdown('<p style="color:#c4b5fd;font-size:.88em;">No sessions yet — start practicing!</p>', unsafe_allow_html=True)
+        else:
+            # Group by date
+            from itertools import groupby
+            grouped = {}
+            for s in recent:
+                grouped.setdefault(s["date"], []).append(s)
+
+            for day, sessions in list(grouped.items())[:7]:
+                try:
+                    day_fmt = datetime.strptime(day, "%Y-%m-%d").strftime("%a, %b %d")
+                except:
+                    day_fmt = day
+                st.markdown(
+                    f'<div style="font-size:.72em;font-weight:700;color:#a78bfa;'
+                    f'letter-spacing:.5px;text-transform:uppercase;margin:10px 0 5px;">{day_fmt}</div>',
+                    unsafe_allow_html=True
+                )
+                for s in sessions:
+                    ok        = s.get("correct", True)
+                    ok_icon   = "✅" if ok else "❌"
+                    ok_col    = "#15803d" if ok else "#be123c"
+                    ok_bg     = "#dcfce7" if ok else "#fee2e2"
+                    mins      = max(1, (s.get("time_taken") or 0) // 60)
+                    pattern   = s.get("pattern", "")
+                    title     = s.get("question_title", "")
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;gap:10px;background:#fff;'
+                        f'border:1px solid #ede9fe;border-radius:10px;padding:9px 14px;margin-bottom:5px;">'
+                        f'  <span style="background:{ok_bg};color:{ok_col};border-radius:6px;'
+                        f'    padding:2px 7px;font-size:.7em;font-weight:700;">{ok_icon}</span>'
+                        f'  <div style="flex:1;min-width:0;">'
+                        f'    <div style="font-weight:600;font-size:.84em;color:#1e1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{title}</div>'
+                        f'    <div style="font-size:.72em;color:#a78bfa;margin-top:1px;">{pattern}</div>'
+                        f'  </div>'
+                        f'  <span style="font-size:.75em;color:#6b7280;white-space:nowrap;">⏱ {mins}m</span>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+    with chart_col:
+        st.markdown(
+            '<div style="font-size:.7em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;'
+            'color:#7c3aed;margin-bottom:10px;">📊 Practice by Pattern</div>',
+            unsafe_allow_html=True
+        )
+        pc = act.get("pattern_counts", {})
+        if not pc:
+            st.markdown('<p style="color:#c4b5fd;font-size:.88em;">No data yet.</p>', unsafe_allow_html=True)
+        else:
+            max_count = max(pc.values()) or 1
+            grads = [
+                "linear-gradient(90deg,#7c3aed,#db2777)",
+                "linear-gradient(90deg,#6366f1,#a855f7)",
+                "linear-gradient(90deg,#db2777,#f97316)",
+                "linear-gradient(90deg,#0ea5e9,#6366f1)",
+                "linear-gradient(90deg,#a855f7,#ec4899)",
+            ]
+            for i, (pattern, count) in enumerate(list(pc.items())[:12]):
+                pct  = count / max_count * 100
+                grad = grads[i % len(grads)]
+                short = pattern if len(pattern) <= 20 else pattern[:18] + "…"
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">'
+                    f'  <span style="font-size:.75em;color:#4c1d95;font-weight:500;min-width:130px;'
+                    f'    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{short}</span>'
+                    f'  <div style="flex:1;background:#f0ebff;border-radius:6px;height:9px;">'
+                    f'    <div style="width:{pct:.0f}%;background:{grad};height:9px;border-radius:6px;"></div>'
+                    f'  </div>'
+                    f'  <span style="font-size:.72em;color:#7c3aed;font-weight:700;min-width:22px;text-align:right;">{count}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 3 — ADD QUESTIONS  (admin only)
+# ══════════════════════════════════════════════════════════════════════════════
+if is_admin:
+    with tabs[3]:
+        st.markdown(
+            '<div style="background:#fff;border:2px dashed #c4b5fd;border-radius:16px;'
+            'padding:28px 28px 12px;text-align:center;margin-bottom:16px;">'
+            '<div style="font-size:1.5em;margin-bottom:6px;">📄</div>'
+            '<div style="font-weight:700;font-size:1.05em;color:#3b0764;margin-bottom:4px;">Upload Markdown File</div>'
+            '<div style="font-size:.85em;color:#7c3aed;margin-bottom:8px;">Parse DSA questions directly from your notes</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        uploaded_md = st.file_uploader("Choose a .md file", type=["md"], label_visibility="collapsed")
+        upload_btn  = st.button("⬆ Upload and Add Questions", disabled=uploaded_md is None, type="primary")
+
+        if upload_btn and uploaded_md:
+            with st.spinner("Processing..."):
+                try:
+                    resp = requests.post(
+                        f"{API_URL}/upload_md",
+                        files={"file": (uploaded_md.name, uploaded_md.getvalue(), "text/markdown")},
+                        headers=auth_headers(),
+                    )
+                    if resp.status_code == 200:
+                        r = resp.json()
+                        st.success(f"✅ Added **{r['added']}** new questions. Total: **{r['total']}**")
+                        st.rerun()
+                    elif resp.status_code == 403:
+                        st.error("Admin access required.")
+                    else:
+                        st.error(f"Upload failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SIDEBAR — PRACTICE PANEL
+# ══════════════════════════════════════════════════════════════════════════════
+if st.session_state.active_qid:
+    if 'start_timestamp' not in st.session_state:
+        st.session_state.start_timestamp = time.time()
+
+    elapsed = int(time.time() - st.session_state.start_timestamp)
+    mins, secs = divmod(elapsed, 60)
+
+    q = next((item for item in questions if item['id'] == st.session_state.active_qid), None)
+    if q:
+        acc_val   = float(q.get('accuracy') or 0)
+        ef_val    = float(q.get('ease_factor') or 2.5)
+        iv_val    = int(q.get('interval_days') or 0)
+        acc_color = "#86efac" if acc_val >= 80 else "#fcd34d" if acc_val >= 60 else "#f9a8d4"
+
+        with st.sidebar:
+            # Header
+            st.markdown(
+                f'<div style="font-size:1em;font-weight:800;padding:6px 0 10px;'
+                f'border-bottom:1px solid #2d1457;margin-bottom:12px;'
+                f'background:linear-gradient(90deg,#c084fc,#f472b6);'
+                f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;">'
+                f'📝 {q["title"]}</div>',
+                unsafe_allow_html=True
+            )
+
+            # Timer
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,#2d1457,#4a1060);'
+                f'border:1px solid #5b21b6;border-radius:14px;padding:10px 14px;'
+                f'text-align:center;margin-bottom:10px;">'
+                f'<div style="font-size:.6em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a78bfa;">Session Time</div>'
+                f'<div style="font-size:2em;font-weight:800;letter-spacing:3px;'
+                f'background:linear-gradient(135deg,#c084fc,#f472b6);'
+                f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;">'
+                f'{mins:02d}:{secs:02d}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+            # Stats grid
+            st.markdown(
+                f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">'
+                f'  <div style="background:#2a1050;border:1px solid #3d1a72;border-radius:10px;padding:8px 6px;text-align:center;">'
+                f'    <div style="font-size:.58em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#7c3aed;">Accuracy</div>'
+                f'    <div style="font-size:.95em;font-weight:700;color:{acc_color};margin-top:2px;">{acc_val:.0f}%</div>'
+                f'  </div>'
+                f'  <div style="background:#2a1050;border:1px solid #3d1a72;border-radius:10px;padding:8px 6px;text-align:center;">'
+                f'    <div style="font-size:.58em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#7c3aed;">Interval</div>'
+                f'    <div style="font-size:.95em;font-weight:700;color:#e9d5ff;margin-top:2px;">{iv_val}d</div>'
+                f'  </div>'
+                f'  <div style="background:#2a1050;border:1px solid #3d1a72;border-radius:10px;padding:8px 6px;text-align:center;">'
+                f'    <div style="font-size:.58em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#7c3aed;">EF</div>'
+                f'    <div style="font-size:.95em;font-weight:700;color:#e9d5ff;margin-top:2px;">{ef_val:.2f}</div>'
+                f'  </div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+            if q.get('suggestions'):
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#2d1457,#4a1060);'
+                    f'border-left:3px solid #c084fc;border-radius:0 10px 10px 0;'
+                    f'padding:8px 12px;font-size:.8em;color:#e9d5ff;margin-bottom:8px;line-height:1.6;">'
+                    f'💡 {q["suggestions"]}</div>',
+                    unsafe_allow_html=True
+                )
+            if q.get('my_gap_analysis'):
+                st.markdown(
+                    f'<div style="background:#2a1050;border-left:3px solid #f472b6;'
+                    f'border-radius:0 10px 10px 0;padding:7px 12px;font-size:.8em;'
+                    f'color:#fce7f3;margin-bottom:8px;line-height:1.6;">'
+                    f'🔍 {q["my_gap_analysis"]}</div>',
+                    unsafe_allow_html=True
+                )
+
+            # ── Input fields ─────────────────────────────────────────────────
+            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">Logic &amp; Code</p>', unsafe_allow_html=True)
+            new_logic = st.text_area("logic", value=q.get('logic',''), key="logic_input",    height=90,  label_visibility="collapsed", placeholder="Describe your approach step by step...")
+            new_code  = st.text_area("code",  value=q.get('code',''),  key="code_input",     height=110, label_visibility="collapsed", placeholder="Paste or type your solution...")
+
+            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">📝 Notes</p>', unsafe_allow_html=True)
+            new_notes = st.text_area("notes", value=q.get('notes') or '', key="notes_input", height=80,  label_visibility="collapsed", placeholder="Key insight, pattern trick, edge case...")
+
+            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">🔍 My Gap Analysis</p>', unsafe_allow_html=True)
+            new_gap   = st.text_area("gap",   value=q.get('my_gap_analysis') or '', key="gap_input", height=80, label_visibility="collapsed", placeholder="Where did my thinking break down?")
+
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+            # ── Buttons ──────────────────────────────────────────────────────
             col_save, col_close = st.columns(2)
-
-            if col_save.button("💾 Save Everything", type="primary", use_container_width=True):
-                log_entry = {
-                    "date": datetime.now().strftime("%Y-%m-%d"),
-                    "logic": new_logic,
-                    "code": new_code,
-                    "time_taken": elapsed
-                }
-                requests.post(f"{API_URL}/questions/{q['id']}/log", json=log_entry)
-                st.success("Progress Saved!")
+            if col_save.button("💾 Save", type="primary", use_container_width=True):
+                requests.post(f"{API_URL}/questions/{q['id']}/log",
+                              json={"logic": new_logic, "code": new_code, "time_taken": elapsed},
+                              headers=auth_headers())
+                requests.patch(f"{API_URL}/questions/{q['id']}/notes",
+                               json={"notes": new_notes, "my_gap_analysis": new_gap},
+                               headers=auth_headers())
+                st.success("Saved!")
                 st.rerun()
 
             if col_close.button("✖ Close", use_container_width=True):
                 st.session_state.active_qid = None
-                if 'start_timestamp' in st.session_state:
-                    del st.session_state.start_timestamp
+                st.session_state.pop('start_timestamp', None)
                 st.rerun()
 
-            # --- AI Validation Button (only if last log within 2 minutes) ---
-            # show_ai_btn = False
-            # if q.get('logs') and len(q['logs']) > 0:
-            #     last_log = q['logs'][-1]
-            #     log_time_taken = last_log.get('time_taken')
-            #     now_ts = int(time.time())
-            #     if log_time_taken is not None and log_time_taken <= 120:
-            #         show_ai_btn = True
-            # if show_ai_btn:
-            if st.button("🤖 Validate with AI", key="ai_validate_btn"):
-                try:
-                    resp = requests.post(f"{API_URL}/questions/{q['id']}/validate")
-                    if resp.status_code == 200:
-                        result = resp.json()
-                        st.success("AI validation complete!")
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-                        # --- Show all AI feedback fields in a clear, styled way ---
-                        st.markdown("### Gap Analysis")
-                        st.markdown(result.get("gap_analysis", ""), unsafe_allow_html=True)
+            if st.button("🤖 Validate with AI", key="ai_btn", use_container_width=True):
+                with st.spinner("Analysing..."):
+                    try:
+                        resp = requests.post(f"{API_URL}/questions/{q['id']}/validate",
+                                            headers=auth_headers())
+                        if resp.status_code == 200:
+                            res = resp.json()
+                            uf  = res.get("updated_fields", {})
+                            ok  = res.get("correct", False)
+                            verdict_col = "#86efac" if ok else "#f9a8d4"
+                            verdict_txt = "✅ Correct" if ok else "❌ Needs Work"
+                            new_acc = uf.get('accuracy', '')
+                            ac = "#86efac" if (new_acc or 0) >= 80 else "#fcd34d" if (new_acc or 0) >= 60 else "#f9a8d4"
 
-                        st.markdown("### Correction Suggestion")
-                        st.info(result.get("correction_suggestion", ""))
-
-                        uf = result.get("updated_fields", {})
-                        st.markdown("### Updated Fields")
-                        st.write(f"**Accuracy:** {uf.get('accuracy', '')}%")
-                        st.write(f"**Revision Status:** {uf.get('revision_status', '')}")
-                        st.write(f"**Next Revision:** {uf.get('next_revision', '')}")
-                        st.write(f"**Ease Factor:** {uf.get('ease_factor', '')}")
-                        st.write(f"**Interval Days:** {uf.get('interval_days', '')}")
-                        st.write(f"**Suggestions:** {uf.get('suggestions', '')}")
-                    else:
-                        st.error("AI validation failed.")
-                except Exception as e:
-                    st.error(f"AI validation error: {e}")
+                            st.markdown(
+                                f'<div style="background:#2a1050;border:1px solid #3d1a72;border-radius:14px;padding:14px;margin-top:8px;">'
+                                f'  <div style="font-weight:700;font-size:.95em;color:{verdict_col};margin-bottom:10px;">{verdict_txt}</div>'
+                                f'  <div style="font-size:.6em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a855f7;margin-bottom:5px;">Gap Analysis</div>'
+                                f'  <div style="font-size:.83em;color:#d8b4fe;margin-bottom:10px;line-height:1.6;">{res.get("gap_analysis","")}</div>'
+                                f'  <div style="font-size:.6em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a855f7;margin-bottom:5px;">Suggestion</div>'
+                                f'  <div style="border-left:3px solid #f472b6;padding:7px 10px;background:#3d1a72;border-radius:0 8px 8px 0;font-size:.83em;color:#fce7f3;margin-bottom:10px;">{res.get("correction_suggestion","")}</div>'
+                                f'  <div style="font-size:.6em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a855f7;margin-bottom:6px;">Updated Metrics</div>'
+                                f'  <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;"><span style="color:#9ca3af;">Accuracy</span><span style="color:{ac};font-weight:600;">{new_acc}%</span></div>'
+                                f'  <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;"><span style="color:#9ca3af;">Status</span><span style="color:#e9d5ff;font-weight:600;">{uf.get("revision_status","")}</span></div>'
+                                f'  <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;"><span style="color:#9ca3af;">Next Revision</span><span style="color:#e9d5ff;font-weight:600;">{uf.get("next_revision","")}</span></div>'
+                                f'  <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;"><span style="color:#9ca3af;">Ease Factor</span><span style="color:#e9d5ff;font-weight:600;">{uf.get("ease_factor","")}</span></div>'
+                                f'  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.8em;"><span style="color:#9ca3af;">Interval</span><span style="color:#e9d5ff;font-weight:600;">{uf.get("interval_days","")}d</span></div>'
+                                f'  <div style="margin-top:8px;font-size:.8em;color:#c084fc;line-height:1.5;">{uf.get("suggestions","")}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.error("AI validation failed.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")

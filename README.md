@@ -59,7 +59,7 @@ sudo tail -n 50 /var/log/nginx/error.log
 sudo nano /etc/nginx/sites-available/dsa
 sudo nginx -t
 sudo systemctl reload nginx
-
+export OPENAI_API_KEY="your-openai-api-key"
 
 nohup uvicorn main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
 

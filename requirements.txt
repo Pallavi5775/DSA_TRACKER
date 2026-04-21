@@ -7,4 +7,12 @@ streamlit_autorefresh
 openai
 pandas
 python-multipart
+python-dotenv
+sqlalchemy
+asyncpg
+psycopg2-binary
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+
 
