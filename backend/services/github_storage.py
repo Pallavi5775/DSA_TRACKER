@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import httpx
@@ -82,6 +83,78 @@ class GitHubStorageService:
         """Write insights/weekly/{week_label}.md"""
         path = f"insights/weekly/{week_label}.md"
         return await self.commit_file(path, markdown, f"weekly summary: {week_label}")
+
+    async def list_sessions_with_insights(self) -> list[dict]:
+        """Return all sessions enriched with their AI insight markdown (when available)."""
+        async with httpx.AsyncClient(timeout=20) as client:
+            tree_r = await client.get(
+                f"{_API}/repos/{self.username}/{REPO_NAME}/git/trees/HEAD",
+                headers=self._headers,
+                params={"recursive": "1"},
+            )
+            if tree_r.status_code != 200:
+                return []
+
+            items = tree_r.json().get("tree", [])
+            session_paths = [
+                i["path"] for i in items
+                if i["path"].startswith("sessions/") and i["path"].endswith(".json")
+            ]
+            # "2026-04-27-Two-Sum" → "insights/2026-04-27-Two-Sum.md"
+            insight_map: dict[str, str] = {
+                i["path"].removeprefix("insights/").removesuffix(".md"): i["path"]
+                for i in items
+                if i["path"].startswith("insights/")
+                and i["path"].endswith(".md")
+                and "/weekly/" not in i["path"]
+            }
+
+            async def _fetch(path: str) -> str | None:
+                r = await client.get(
+                    f"{_API}/repos/{self.username}/{REPO_NAME}/contents/{path}",
+                    headers=self._headers,
+                )
+                if r.status_code == 200:
+                    return base64.b64decode(r.json()["content"]).decode()
+                return None
+
+            # Fetch all session files in parallel
+            session_texts = await asyncio.gather(
+                *[_fetch(p) for p in session_paths], return_exceptions=True
+            )
+
+            sessions: list[dict] = []
+            insight_keys_needed: list[str] = []
+            parsed: list[dict] = []
+
+            for path, text in zip(session_paths, session_texts):
+                if isinstance(text, Exception) or not text:
+                    continue
+                try:
+                    session = json.loads(text)
+                    parts = path.split("/")           # ["sessions", "2026-04-27", "Slug.json"]
+                    insight_key = ""
+                    if len(parts) == 3:
+                        insight_key = f"{parts[1]}-{parts[2].removesuffix('.json')}"
+                    parsed.append(session)
+                    insight_keys_needed.append(insight_key)
+                except Exception:
+                    pass
+
+            # Fetch matched insight files in parallel
+            insight_paths = [insight_map.get(k, "") for k in insight_keys_needed]
+            insight_texts = await asyncio.gather(
+                *[_fetch(p) if p else asyncio.sleep(0, result=None) for p in insight_paths],
+                return_exceptions=True,
+            )
+
+            for session, insight_text in zip(parsed, insight_texts):
+                if insight_text and not isinstance(insight_text, Exception):
+                    session["insight"] = insight_text
+                sessions.append(session)
+
+        sessions.sort(key=lambda s: s.get("date", ""), reverse=True)
+        return sessions
 
     async def list_session_files(self) -> list[dict]:
         """Return all committed session JSON objects (for weekly summary)."""

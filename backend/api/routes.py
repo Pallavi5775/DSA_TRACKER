@@ -177,6 +177,24 @@ async def get_practice_days(
     return {"practice_days": user.practice_days if user else ""}
 
 
+@router.get("/github/history")
+async def github_history(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """Return all practice sessions + AI insights from the user's private GitHub repo."""
+    from backend.db.models import User as UserModel
+    from backend.services.github_storage import GitHubStorageService
+
+    user = await db.get(UserModel, user_id)
+    if not user or not user.github_access_token or not user.github_username:
+        return {"connected": False, "sessions": []}
+
+    svc = GitHubStorageService(user.github_access_token, user.github_username)
+    sessions = await svc.list_sessions_with_insights()
+    return {"connected": True, "sessions": sessions}
+
+
 @router.post("/sync_questions")
 async def sync_questions(
     db: AsyncSession = Depends(get_db),

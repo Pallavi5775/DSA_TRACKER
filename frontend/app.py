@@ -34,10 +34,13 @@ def _restore_auth_from_qparams():
                          headers={"Authorization": f"Bearer {tok}"}, timeout=5)
         if r.status_code == 200:
             me = r.json()
-            st.session_state.token    = tok
-            st.session_state.username = me.get("username", st.query_params.get("usr", ""))
-            st.session_state.user_id  = me.get("id", int(st.query_params.get("uid", "0") or "0"))
-            st.session_state.role     = me.get("role", st.query_params.get("rol", "user"))
+            st.session_state.token          = tok
+            st.session_state.username       = me.get("username", st.query_params.get("usr", ""))
+            st.session_state.user_id        = me.get("id", int(st.query_params.get("uid", "0") or "0"))
+            st.session_state.role           = me.get("role", st.query_params.get("rol", "user"))
+            st.session_state.oauth_provider = me.get("oauth_provider")
+            st.session_state.github_username= me.get("github_username")
+            st.session_state.avatar_url     = me.get("avatar_url")
             st.rerun()
         else:
             # Token expired or invalid — clear it
@@ -455,8 +458,9 @@ with hdr_right:
 questions = fetch_questions()
 df = pd.DataFrame(questions) if questions else pd.DataFrame()
 
-is_admin = st.session_state.get('role', 'user') == 'admin'
-tab_labels = ["📋 Questions", "📅 Calendar", "⚡ Activity", "⚙ Settings"] + (["➕ Add Questions"] if is_admin else [])
+is_admin    = st.session_state.get('role', 'user') == 'admin'
+has_github  = st.session_state.get('oauth_provider') == 'github'
+tab_labels  = ["📋 Questions", "📅 Calendar", "⚡ Activity", "⚙ Settings", "📖 Journal"] + (["➕ Add Questions"] if is_admin else [])
 tabs = st.tabs(tab_labels)
 
 # Persist active tab across reloads via ?tab=N in the URL
@@ -866,10 +870,120 @@ with tabs[3]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  TAB 4 — ADD QUESTIONS  (admin only)
+#  TAB 4 — PRACTICE JOURNAL  (GitHub-connected users)
+# ══════════════════════════════════════════════════════════════════════════════
+with tabs[4]:
+    st.markdown("## 📖 Practice Journal")
+    st.caption("Your sessions are stored in a private GitHub repo — only you can see them.")
+
+    if not has_github:
+        st.info(
+            "This feature is available for GitHub login users. "
+            "Log out and sign in with GitHub to enable it."
+        )
+    else:
+        gh_user = st.session_state.get("github_username", "")
+        repo_url = f"https://github.com/{gh_user}/dsa-planner-data"
+        st.markdown(
+            f'<a href="{repo_url}" target="_blank" style="color:#7c3aed;font-size:.85em">'
+            f'🔗 View raw repo: {gh_user}/dsa-planner-data</a>',
+            unsafe_allow_html=True,
+        )
+        st.divider()
+
+        load_col, filter_col1, filter_col2 = st.columns([1, 2, 2])
+        with load_col:
+            if st.button("🔄 Load / Refresh", type="primary"):
+                st.session_state.pop("gh_journal", None)
+
+        # Fetch from API (cached in session_state until refresh)
+        if "gh_journal" not in st.session_state:
+            with st.spinner("Fetching sessions from GitHub…"):
+                try:
+                    r = requests.get(f"{API_URL}/github/history",
+                                     headers=auth_headers(), timeout=30)
+                    if r.status_code == 200:
+                        data = r.json()
+                        st.session_state.gh_journal = data.get("sessions", [])
+                    else:
+                        st.session_state.gh_journal = []
+                        st.error("Could not load sessions from GitHub.")
+                except Exception as e:
+                    st.session_state.gh_journal = []
+                    st.error(f"Error: {e}")
+
+        sessions = st.session_state.get("gh_journal", [])
+
+        if not sessions:
+            st.info("No practice sessions found in your repo yet. Complete a session to start tracking!")
+        else:
+            # ── Filters ──────────────────────────────────────────────────────
+            with filter_col1:
+                search_q = st.text_input("🔍 Search question", "", key="jrn_search",
+                                         placeholder="e.g. Two Sum")
+            with filter_col2:
+                result_filter = st.selectbox("Filter by result", ["All", "Correct ✅", "Incorrect ❌"],
+                                             key="jrn_filter")
+
+            filtered = sessions
+            if search_q:
+                filtered = [s for s in filtered
+                            if search_q.lower() in s.get("question", "").lower()]
+            if result_filter == "Correct ✅":
+                filtered = [s for s in filtered if s.get("correct")]
+            elif result_filter == "Incorrect ❌":
+                filtered = [s for s in filtered if not s.get("correct")]
+
+            st.markdown(f"**{len(filtered)} session(s)**")
+            st.divider()
+
+            # ── Sessions grouped by date ──────────────────────────────────────
+            current_date = None
+            for s in filtered:
+                date = s.get("date", "Unknown date")
+                if date != current_date:
+                    st.markdown(f"### 📅 {date}")
+                    current_date = date
+
+                correct    = s.get("correct", True)
+                mins       = s.get("time_taken_seconds", 0) // 60
+                secs       = s.get("time_taken_seconds", 0) % 60
+                time_label = f"{mins}m {secs}s" if mins else f"{secs}s"
+                badge      = "✅" if correct else "❌"
+                label      = f"{badge} **{s.get('question','')}** · {s.get('pattern','?')} · {s.get('difficulty','?')} · ⏱ {time_label}"
+
+                with st.expander(label, expanded=False):
+                    inner = st.tabs(["💡 Logic", "💻 Code", "🤖 AI Insight"])
+
+                    with inner[0]:
+                        logic = s.get("logic", "").strip()
+                        if logic:
+                            st.markdown(logic)
+                        else:
+                            st.caption("No logic recorded for this session.")
+
+                    with inner[1]:
+                        code = s.get("code", "").strip()
+                        if code:
+                            st.code(code, language="python")
+                        else:
+                            st.caption("No code recorded for this session.")
+
+                    with inner[2]:
+                        insight = s.get("insight", "").strip()
+                        if insight:
+                            st.markdown(insight)
+                        else:
+                            st.caption(
+                                "No AI insight yet. Make sure ANTHROPIC_API_KEY is set on the server."
+                            )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 5 — ADD QUESTIONS  (admin only)
 # ══════════════════════════════════════════════════════════════════════════════
 if is_admin:
-    with tabs[4]:
+    with tabs[5]:
         st.markdown(
             '<div style="background:#fff;border:2px dashed #c4b5fd;border-radius:16px;'
             'padding:28px 28px 12px;text-align:center;margin-bottom:16px;">'

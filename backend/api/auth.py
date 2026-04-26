@@ -152,5 +152,13 @@ async def github_callback(code: str, db: AsyncSession = Depends(get_db)):
 # ── Session ────────────────────────────────────────────────────────────────────
 
 @router.get("/me")
-async def me(current: dict = Depends(get_current_user)):
-    return current
+async def me(current: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy.future import select
+    from backend.db.models import User
+    user = (await db.execute(select(User).where(User.id == current["id"]))).scalar_one_or_none()
+    return {
+        **current,
+        "oauth_provider":  user.oauth_provider  if user else None,
+        "github_username": user.github_username if user else None,
+        "avatar_url":      user.avatar_url      if user else None,
+    }
