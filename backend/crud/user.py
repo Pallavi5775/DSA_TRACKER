@@ -49,17 +49,25 @@ async def get_or_create_oauth_user(
             await db.refresh(user)
         return user
 
-    # 2. Same email already in DB (link OAuth to existing account)
+    # 2. Same email already in DB — only link if it's already a passwordless OAuth account.
+    #    Legacy password-auth users (hashed_password set) are NOT auto-merged; the email
+    #    gets a numeric suffix so both accounts coexist independently.
     result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
-    if user:
-        user.oauth_provider = provider
-        user.oauth_id = oauth_id
-        if avatar_url:
-            user.avatar_url = avatar_url
-        await db.commit()
-        await db.refresh(user)
-        return user
+    existing = result.scalar_one_or_none()
+    if existing:
+        if existing.hashed_password is None:
+            # Pure OAuth account — safe to link the new provider to it
+            existing.oauth_provider = provider
+            existing.oauth_id = oauth_id
+            if avatar_url:
+                existing.avatar_url = avatar_url
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+        else:
+            # Legacy password user shares this email — use a provider-scoped email
+            # so we can create a new independent account without a unique-key clash
+            email = f"{provider}_{oauth_id}@oauth.local"
 
     # 3. Brand-new user
     role = await _first_user_gets_admin(db)
