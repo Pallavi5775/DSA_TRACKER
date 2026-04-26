@@ -972,11 +972,17 @@ if has_github and JOURNAL_IDX is not None:
 
                     with inner[0]:
                         logic = (s.get("logic") or "").strip()
-                        st.markdown(logic) if logic else st.caption("No logic recorded.")
+                        if logic:
+                            st.markdown(logic)
+                        else:
+                            st.caption("No logic recorded.")
 
                     with inner[1]:
                         code = (s.get("code") or "").strip()
-                        st.code(code, language="python") if code else st.caption("No code recorded.")
+                        if code:
+                            st.code(code, language="python")
+                        else:
+                            st.caption("No code recorded.")
 
                     with inner[2]:
                         insight = (s.get("insight") or "").strip()
