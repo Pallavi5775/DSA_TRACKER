@@ -392,15 +392,25 @@ Your task is to analyze a student's session and update the question metadata.
 - Self-Awareness Check: Does the student's `my_gap_analysis` correctly identify their own weakness? If yes, add up to +10 points to accuracy (self-awareness bonus).
 - Notes Quality: Do the `notes` capture the core insight of the pattern? If yes, add up to +5 points.
 - The "Why" Analysis:
-      - If Correct: Explain why this greedy choice leads to the global optimum.
-      - If Incorrect: Explain the logical flaw (Greedy Trap).
+      - If Correct: Explain why this approach leads to the correct solution and what makes it optimal.
+      - If Incorrect: Explain the logical flaw precisely — what assumption broke and why.
 - Complexity Check: Verify if the time complexity matches optimal O(n log n) or O(n).
 
 ### TASK 3: ASSESSMENT ONLY (backend handles all SRS scheduling)
 1. accuracy: 0-100. Base score from code/logic quality. Add bonuses. Cap at 100.
 2. correct: true if the approach and code are logically valid, false otherwise.
 3. revision_status: "Mastered" if accuracy > 90%, "Needs Work" if accuracy < 60%, "Pending" if gibberish.
-4. suggestions: One-sentence summary referencing the student's notes/gap analysis if relevant.
+4. suggestions: A detailed 4-6 sentence analysis covering:
+   (a) What the student did well — cite specific parts of their logic or code.
+   (b) The key issue or gap found — be precise, not vague.
+   (c) WHY the accuracy score was assigned — e.g. "The score of 72% reflects a valid two-pointer approach but incorrect handling of duplicates and O(n²) fallback in the inner loop."
+   (d) Whether the student's own gap analysis was accurate or missed the real issue.
+   (e) One concrete next-practice focus to close the identified gap.
+5. gap_analysis (HTML string): Structured HTML with four labeled sections separated by line breaks:
+   "<b>Score Reasoning:</b> [explain exactly why this % was given — cite specific strengths that boosted the score and specific weaknesses that reduced it]<br><br>
+    <b>Observations:</b> [what the student's logic, code, and self-analysis reveal about their current understanding level]<br><br>
+    <b>Pattern Gaps:</b> [what specific pattern knowledge, technique, or edge case handling is missing or shaky]<br><br>
+    <b>Next Focus:</b> [one concrete, actionable improvement to target in the very next practice session]"
 
 DO NOT calculate ease_factor, interval_days, or next_revision. The backend computes these.
 
@@ -408,13 +418,13 @@ DO NOT calculate ease_factor, interval_days, or next_revision. The backend compu
 Return ONLY a valid JSON object. No markdown. No preamble.
 {{
     "correct": boolean,
-    "gap_analysis": "HTML string...",
-    "gap_explanation": "Plain text...",
+    "gap_analysis": "HTML string with Score Reasoning, Observations, Pattern Gaps, Next Focus sections",
+    "gap_explanation": "Plain text version of the gap analysis",
     "correction_suggestion": "The optimal implementation hint...",
     "updated_fields": {{
         "accuracy": float,
         "revision_status": "string",
-        "suggestions": "string"
+        "suggestions": "4-6 sentence detailed analysis with score reasoning"
     }}
 }}
 """
@@ -429,7 +439,7 @@ Return ONLY a valid JSON object. No markdown. No preamble.
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
-            max_tokens=1000,
+            max_tokens=1800,
             temperature=0,
         )
 

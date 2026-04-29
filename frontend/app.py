@@ -1078,20 +1078,7 @@ if has_github and JOURNAL_IDX is not None:
                     gap_text    = (s.get("gap_analysis") or "").strip()
                     insight_txt = (s.get("insight") or "").strip()
 
-                    # Prominent gap analysis banner (shown outside tabs so it's always visible)
-                    if gap_text:
-                        st.markdown(
-                            f'<div style="background:linear-gradient(135deg,#2d1457,#4a1060);'
-                            f'border-left:4px solid #f472b6;border-radius:0 12px 12px 0;'
-                            f'padding:12px 16px;margin-bottom:10px;">'
-                            f'<div style="font-size:.65em;font-weight:700;letter-spacing:1px;'
-                            f'text-transform:uppercase;color:#f472b6;margin-bottom:6px;">🔍 AI Gap Analysis</div>'
-                            f'<div style="font-size:.88em;color:#fce7f3;line-height:1.7;">{gap_text}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-
-                    inner = st.tabs(["💡 Logic", "💻 Code", "🤖 AI Insight"])
+                    inner = st.tabs(["💡 Logic", "💻 Code", "🔍 Gap Analysis", "🤖 AI Insight"])
 
                     with inner[0]:
                         logic = (s.get("logic") or "").strip()
@@ -1108,6 +1095,20 @@ if has_github and JOURNAL_IDX is not None:
                             st.caption("No code recorded.")
 
                     with inner[2]:
+                        if gap_text:
+                            st.markdown(
+                                f'<div style="background:linear-gradient(135deg,#1a0533,#2d1457);'
+                                f'border:1px solid #3d1a72;border-radius:12px;padding:16px 18px;">'
+                                f'<div style="font-size:.65em;font-weight:700;letter-spacing:1px;'
+                                f'text-transform:uppercase;color:#f472b6;margin-bottom:10px;">🔍 AI Gap Analysis</div>'
+                                f'<div style="font-size:.88em;color:#fce7f3;line-height:1.8;">{gap_text}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.caption("No gap analysis yet — save a session to generate one.")
+
+                    with inner[3]:
                         if insight_txt:
                             st.markdown(insight_txt)
                         else:
@@ -1259,6 +1260,18 @@ if st.session_state.get("view_last_qid") and not st.session_state.get("active_qi
 #  SIDEBAR — PRACTICE PANEL
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.active_qid:
+    # Expand sidebar to 85 vw when a question is open for editing
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] {
+        min-width: 85vw !important;
+        max-width: 85vw !important;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        min-width: 85vw !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     if 'start_timestamp' not in st.session_state:
         st.session_state.start_timestamp = time.time()
 
@@ -1317,11 +1330,14 @@ if st.session_state.active_qid:
             )
 
             if q.get('suggestions'):
+                sugg_html = q["suggestions"].replace('\n', '<br>')
                 st.markdown(
                     f'<div style="background:linear-gradient(135deg,#2d1457,#4a1060);'
                     f'border-left:3px solid #c084fc;border-radius:0 10px 10px 0;'
-                    f'padding:8px 12px;font-size:.8em;color:#e9d5ff;margin-bottom:8px;line-height:1.6;">'
-                    f'💡 {q["suggestions"]}</div>',
+                    f'padding:10px 14px;font-size:.8em;color:#e9d5ff;margin-bottom:8px;line-height:1.7;">'
+                    f'<div style="font-size:.65em;font-weight:700;letter-spacing:.8px;text-transform:uppercase;'
+                    f'color:#c084fc;margin-bottom:6px;">💡 AI Analysis</div>'
+                    f'{sugg_html}</div>',
                     unsafe_allow_html=True
                 )
             if q.get('my_gap_analysis'):
@@ -1333,17 +1349,22 @@ if st.session_state.active_qid:
                     unsafe_allow_html=True
                 )
 
-            # ── Input fields ─────────────────────────────────────────────────
-            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">💡 Logic / Approach</p>', unsafe_allow_html=True)
-            new_logic = st.text_area("logic", value=q.get('logic',''), key="logic_input",    height=160, label_visibility="collapsed", placeholder="Describe your approach step by step — what data structure, why this algorithm, what edge cases you considered...")
-            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">💻 Code</p>', unsafe_allow_html=True)
-            new_code  = st.text_area("code",  value=q.get('code',''),  key="code_input",     height=240, label_visibility="collapsed", placeholder="Paste or type your solution here...")
+            # ── Input fields (two-column layout to use the wide sidebar) ────────
+            col_left, col_right = st.columns(2, gap="medium")
 
-            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">📝 Notes</p>', unsafe_allow_html=True)
-            new_notes = st.text_area("notes", value=q.get('notes') or '', key="notes_input", height=110, label_visibility="collapsed", placeholder="Key insight, pattern trick, edge case to remember...")
+            with col_left:
+                st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">💡 Logic / Approach</p>', unsafe_allow_html=True)
+                new_logic = st.text_area("logic", value=q.get('logic',''), key="logic_input", height=220, label_visibility="collapsed", placeholder="Describe your approach step by step — what data structure, why this algorithm, what edge cases you considered...")
 
-            st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">🔍 My Gap Analysis</p>', unsafe_allow_html=True)
-            new_gap   = st.text_area("gap",   value=q.get('my_gap_analysis') or '', key="gap_input", height=110, label_visibility="collapsed", placeholder="Where did my thinking break down? What would I do differently?")
+                st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">📝 Notes</p>', unsafe_allow_html=True)
+                new_notes = st.text_area("notes", value=q.get('notes') or '', key="notes_input", height=140, label_visibility="collapsed", placeholder="Key insight, pattern trick, edge case to remember...")
+
+            with col_right:
+                st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">💻 Code</p>', unsafe_allow_html=True)
+                new_code = st.text_area("code", value=q.get('code',''), key="code_input", height=220, label_visibility="collapsed", placeholder="Paste or type your solution here...")
+
+                st.markdown('<p style="font-size:.62em;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6d28d9;margin:14px 0 4px;">🔍 My Gap Analysis</p>', unsafe_allow_html=True)
+                new_gap = st.text_area("gap", value=q.get('my_gap_analysis') or '', key="gap_input", height=140, label_visibility="collapsed", placeholder="Where did my thinking break down? What would I do differently?")
 
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -1389,33 +1410,34 @@ if st.session_state.active_qid:
                         else "#f9a8d4"
                     )
 
+                    sugg_html = (q.get("suggestions") or "").replace('\n', '<br>')
                     st.markdown(
                         f'<div style="background:#2a1050;border:1px solid #3d1a72;'
                         f'border-radius:14px;padding:14px;margin-top:10px;">'
                         f'<div style="font-size:.6em;font-weight:700;letter-spacing:1px;'
-                        f'text-transform:uppercase;color:#a855f7;margin-bottom:6px;">🤖 AI Analysis</div>'
+                        f'text-transform:uppercase;color:#a855f7;margin-bottom:8px;">🤖 AI Analysis</div>'
                         f'<div style="font-weight:700;font-size:.95em;color:{verdict_color};'
                         f'margin-bottom:10px;">{verdict_text}</div>'
                         + (
                             f'<div style="display:flex;justify-content:space-between;'
-                            f'padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;">'
+                            f'padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;margin-bottom:2px;">'
                             f'<span style="color:#9ca3af;">Accuracy</span>'
-                            f'<span style="color:{acc_color};font-weight:600;">{accuracy}%</span></div>'
+                            f'<span style="color:{acc_color};font-weight:700;">{accuracy}%</span></div>'
                             if accuracy is not None else ""
                         )
                         + (
                             f'<div style="display:flex;justify-content:space-between;'
-                            f'padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;">'
+                            f'padding:5px 0;border-bottom:1px solid #3d1a72;font-size:.8em;margin-bottom:8px;">'
                             f'<span style="color:#9ca3af;">Status</span>'
                             f'<span style="color:#e9d5ff;font-weight:600;">{status}</span></div>'
                             if status else ""
                         )
                         + (
-                            f'<div style="margin-top:8px;border-left:3px solid #f472b6;'
-                            f'padding:7px 10px;background:#3d1a72;border-radius:0 8px 8px 0;'
-                            f'font-size:.82em;color:#fce7f3;line-height:1.5;">'
-                            f'{q["suggestions"]}</div>'
-                            if q.get("suggestions") else ""
+                            f'<div style="border-left:3px solid #f472b6;'
+                            f'padding:10px 12px;background:#3d1a72;border-radius:0 8px 8px 0;'
+                            f'font-size:.82em;color:#fce7f3;line-height:1.7;">'
+                            f'{sugg_html}</div>'
+                            if sugg_html else ""
                         )
                         + '</div>',
                         unsafe_allow_html=True,

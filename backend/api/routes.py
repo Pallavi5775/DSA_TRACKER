@@ -29,7 +29,7 @@ async def _validate_then_push(user_id: int, qid: int, session_data: dict) -> Non
         try:
             async with AsyncSessionLocal() as db:
                 result = await crud.validate_question(db, qid, user_id)
-            gap_analysis = result.get("suggestions", "") if result else ""
+            gap_analysis = result.get("gap_analysis", "") if result else ""
             log.info("[session] validate done for qid=%s correct=%s", qid, result.get("correct") if result else "no-result")
         except Exception as ve:
             log.error("[session] validate failed for qid=%s: %s", qid, ve, exc_info=True)
