@@ -506,14 +506,15 @@ is_admin   = st.session_state.get('role', 'user') == 'admin'
 has_github = st.session_state.get('oauth_provider') == 'github'
 
 # Build tab list dynamically — Journal only for GitHub users, Add Questions only for admins
-tab_labels = ["📋 Questions", "📅 Calendar", "⚡ Activity", "⚙ Settings"]
+tab_labels = ["📋 Questions", "📅 Calendar", "⚡ Activity", "⚙ Settings", "📚 Patterns"]
 if has_github:
     tab_labels.append("📖 Journal")
 if is_admin:
     tab_labels.append("➕ Add Questions")
 
-JOURNAL_IDX = tab_labels.index("📖 Journal") if has_github else None
-ADMIN_IDX   = tab_labels.index("➕ Add Questions") if is_admin else None
+JOURNAL_IDX  = tab_labels.index("📖 Journal") if has_github else None
+ADMIN_IDX    = tab_labels.index("➕ Add Questions") if is_admin else None
+PATTERNS_IDX = tab_labels.index("📚 Patterns")
 
 tabs = st.tabs(tab_labels)
 
@@ -1023,6 +1024,1070 @@ with tabs[3]:
         except Exception as e:
             st.error(f"Error: {e}")
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 4 — PATTERN NOTES  (first-time study reference)
+# ══════════════════════════════════════════════════════════════════════════════
+with tabs[PATTERNS_IDX]:
+
+    # ── helpers ───────────────────────────────────────────────────────────────
+    def _sec(title):
+        st.markdown(
+            f'<p style="font-size:.62em;font-weight:700;letter-spacing:1px;'
+            f'text-transform:uppercase;color:#7c3aed;margin:18px 0 6px;">{title}</p>',
+            unsafe_allow_html=True,
+        )
+
+    def _bullets(items, color="#4c1d95"):
+        html = "".join(
+            f'<li style="margin-bottom:4px;color:#374151;">{it}</li>' for it in items
+        )
+        st.markdown(
+            f'<ul style="padding-left:18px;margin:0;font-size:.88em;line-height:1.7;">{html}</ul>',
+            unsafe_allow_html=True,
+        )
+
+    def _overview(tagline, mental_model, complexity):
+        st.markdown(
+            f'<div style="background:linear-gradient(135deg,#ede9fe,#fce7f3);'
+            f'border:1.5px solid #c4b5fd;border-radius:14px;padding:16px 20px;margin-bottom:6px;">'
+            f'<div style="font-size:.82em;font-style:italic;color:#5b21b6;margin-bottom:8px;">{tagline}</div>'
+            f'<div style="font-size:.88em;color:#1e1b4b;line-height:1.7;">{mental_model}</div>'
+            f'<div style="margin-top:10px;font-size:.78em;color:#7c3aed;font-weight:600;">'
+            f'⏱ Typical complexity: {complexity}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    def _technique(icon, name, steps, code, insight, complexity=""):
+        with st.expander(f"{icon}  {name}", expanded=False):
+            _sec("Algorithm Steps")
+            _bullets(steps)
+            _sec("Code Template")
+            st.code(code, language="python")
+            if insight:
+                st.markdown(
+                    f'<div style="background:#fdf4ff;border-left:3px solid #a855f7;'
+                    f'border-radius:0 8px 8px 0;padding:8px 12px;font-size:.83em;'
+                    f'color:#581c87;line-height:1.6;margin-top:6px;">💡 {insight}</div>',
+                    unsafe_allow_html=True,
+                )
+            if complexity:
+                st.markdown(
+                    f'<p style="font-size:.75em;color:#6b7280;margin-top:6px;">⏱ {complexity}</p>',
+                    unsafe_allow_html=True,
+                )
+
+    # ── pattern tabs ─────────────────────────────────────────────────────────
+    p_tabs = st.tabs(["🔢 Array", "🧮 DP", "🕸 Graphs", "💰 Greedy", "⛰ Heap", "📚 Stack", "🔤 String"])
+
+    # ═══════════════════════════════════════════════════════
+    #  ARRAY
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[0]:
+        _overview(
+            "Arrays are the backbone of DSA — master these four core techniques and 60% of problems become solvable.",
+            "Most array problems reduce to one of: shrinking a window, moving pointers inward, precomputing prefix info, or binary-searching on a sorted/monotone answer space.",
+            "O(n) for most patterns; O(n log n) when sorting is needed first",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Subarray / substring with a property (sum, distinct count) → <b>Sliding Window</b>",
+            "Find pair / remove duplicates in sorted array → <b>Two Pointers</b>",
+            "Range sum queries, equilibrium point → <b>Prefix Sum</b>",
+            "Search in sorted / rotated array, find first/last occurrence → <b>Binary Search</b>",
+            "Max sum contiguous subarray, max profit → <b>Kadane's</b>",
+        ])
+        _sec("Techniques")
+        _technique(
+            "🪟", "Sliding Window",
+            [
+                "Use when you need a contiguous subarray satisfying a condition.",
+                "Fixed-size window: move both left and right together (right − left == k).",
+                "Variable window: expand right freely; shrink left when the window violates the condition.",
+                "Track the answer at every valid window state.",
+            ],
+            '''\
+def max_sum_subarray_k(arr, k):
+    window_sum = sum(arr[:k])
+    best = window_sum
+    for i in range(k, len(arr)):
+        window_sum += arr[i] - arr[i - k]   # slide
+        best = max(best, window_sum)
+    return best
+
+# Variable window — longest subarray with sum <= target
+def longest_subarray(arr, target):
+    left = total = best = 0
+    for right in range(len(arr)):
+        total += arr[right]
+        while total > target:          # shrink until valid
+            total -= arr[left]; left += 1
+        best = max(best, right - left + 1)
+    return best''',
+            "The window shrinks from the left only when the invariant breaks — never skip ahead.",
+            "Time O(n), Space O(1)",
+        )
+        _technique(
+            "👉👈", "Two Pointers",
+            [
+                "Works on SORTED arrays (or arrays you can sort without losing info).",
+                "Place one pointer at start, one at end.",
+                "If arr[l] + arr[r] < target → move l right (need larger).",
+                "If arr[l] + arr[r] > target → move r left (need smaller).",
+                "Stop when l >= r.",
+            ],
+            '''\
+def two_sum_sorted(arr, target):
+    l, r = 0, len(arr) - 1
+    while l < r:
+        s = arr[l] + arr[r]
+        if s == target:   return [l, r]
+        elif s < target:  l += 1
+        else:             r -= 1
+    return []
+
+# Remove duplicates in-place (slow/fast pointer variant)
+def remove_duplicates(arr):
+    if not arr: return 0
+    slow = 0
+    for fast in range(1, len(arr)):
+        if arr[fast] != arr[slow]:
+            slow += 1
+            arr[slow] = arr[fast]
+    return slow + 1''',
+            "For 3Sum: fix one element with a loop, then run two-pointer on the rest. Sort first — O(n²) total.",
+            "Time O(n) after O(n log n) sort",
+        )
+        _technique(
+            "➕", "Prefix Sum",
+            [
+                "Build prefix[] where prefix[i] = sum of arr[0..i-1].",
+                "Range sum [l, r] = prefix[r+1] - prefix[l] in O(1).",
+                "For 2D grids, build a 2D prefix sum table.",
+                "Combine with a hash map to find subarrays with a target sum.",
+            ],
+            '''\
+# 1-D prefix sum
+prefix = [0] * (len(arr) + 1)
+for i, v in enumerate(arr):
+    prefix[i+1] = prefix[i] + v
+range_sum = lambda l, r: prefix[r+1] - prefix[l]
+
+# Count subarrays with sum == k  (hash map trick)
+def subarray_sum_k(arr, k):
+    count = 0
+    running = 0
+    seen = {0: 1}          # prefix_sum → frequency
+    for v in arr:
+        running += v
+        count += seen.get(running - k, 0)
+        seen[running] = seen.get(running, 0) + 1
+    return count''',
+            "The hash map trick turns O(n²) brute-force subarray search into O(n).",
+            "Time O(n), Space O(n)",
+        )
+        _technique(
+            "🔍", "Binary Search",
+            [
+                "Classic: sorted array, find target → O(log n).",
+                "Rotated array: decide which half is sorted; search there.",
+                "'Binary search on answer': if answer space is monotone (feasible/not), binary search on it.",
+                "Template: lo=0, hi=n-1; while lo<=hi; mid=(lo+hi)//2.",
+            ],
+            '''\
+# Classic
+def binary_search(arr, target):
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:   return mid
+        elif arr[mid] < target:  lo = mid + 1
+        else:                    hi = mid - 1
+    return -1
+
+# Binary search on answer — "minimum max pages" style
+def feasible(arr, k, mid): ...   # True if mid is achievable with k splits
+
+def min_max_split(arr, k):
+    lo, hi = max(arr), sum(arr)
+    ans = hi
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if feasible(arr, k, mid):
+            ans = mid; hi = mid - 1
+        else:
+            lo = mid + 1
+    return ans''',
+            "When asked for 'minimum of maximums' or 'maximum of minimums', binary search on the answer.",
+        )
+        _technique(
+            "📈", "Kadane's Algorithm",
+            [
+                "Maximum sum contiguous subarray in O(n).",
+                "At each index, decide: extend the current subarray or start fresh.",
+                "current = max(arr[i], current + arr[i])",
+                "Track global best = max(best, current).",
+            ],
+            '''\
+def kadane(arr):
+    current = best = arr[0]
+    for v in arr[1:]:
+        current = max(v, current + v)
+        best = max(best, current)
+    return best
+
+# Variant: also return start/end indices
+def kadane_with_indices(arr):
+    best = current = arr[0]
+    start = end = temp_start = 0
+    for i in range(1, len(arr)):
+        if arr[i] > current + arr[i]:
+            current = arr[i]; temp_start = i
+        else:
+            current += arr[i]
+        if current > best:
+            best = current; start = temp_start; end = i
+    return best, start, end''',
+            "If all elements are negative, Kadane correctly returns the single largest element.",
+            "Time O(n), Space O(1)",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Sliding window on unsorted arrays: can't use two-pointer — values don't shrink monotonically.",
+            "Off-by-one in binary search: use <code>lo <= hi</code> for exact match; <code>lo < hi</code> when converging to a boundary.",
+            "Prefix sum index shift: prefix[0]=0, so range sum is prefix[r+1]−prefix[l], not prefix[r]−prefix[l].",
+            "Kadane with all negatives: initialise both <code>current</code> and <code>best</code> to arr[0], not 0.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  DYNAMIC PROGRAMMING
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[1]:
+        _overview(
+            "DP = recursion + memoisation. If a brute-force recursion recomputes the same subproblem, cache it.",
+            "The art of DP is defining the <b>state</b>: what exactly does dp[i] (or dp[i][j]) represent? "
+            "Once that's clear, write the recurrence, set base cases, and decide top-down (memo) or bottom-up (table).",
+            "Usually O(n²) or O(n·W) time, O(n) or O(n²) space",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Problem asks for <b>count / maximum / minimum</b> of ways to reach a goal.",
+            "You make a sequence of choices and later choices depend on earlier ones.",
+            "Brute-force recursion has <b>overlapping subproblems</b> (same args seen twice).",
+            "Optimal substructure: optimal solution built from optimal sub-solutions.",
+            "Keywords: 'how many ways', 'minimum cost', 'longest', 'can you reach'.",
+        ])
+        _sec("Techniques")
+        _technique(
+            "🪜", "1-D DP (Climbing Stairs / Fibonacci-like)",
+            [
+                "State: dp[i] = answer for the first i elements.",
+                "Recurrence: look back 1 or 2 steps (or k steps).",
+                "Base cases: dp[0], dp[1] set by hand.",
+                "Often space-optimisable to O(1) using two variables.",
+            ],
+            '''\
+# Climbing stairs — distinct ways to reach step n
+def climb_stairs(n):
+    if n <= 2: return n
+    a, b = 1, 2
+    for _ in range(3, n + 1):
+        a, b = b, a + b
+    return b
+
+# Minimum cost to reach top (pay cost[i] to leave step i)
+def min_cost_climbing(cost):
+    n = len(cost)
+    dp = [0] * (n + 1)
+    for i in range(2, n + 1):
+        dp[i] = min(dp[i-1] + cost[i-1], dp[i-2] + cost[i-2])
+    return dp[n]''',
+            "Space-optimise by keeping only the last 1-2 dp values — draw the dependency arrow first.",
+        )
+        _technique(
+            "🗂", "2-D DP (Grid / String Pairs)",
+            [
+                "State: dp[i][j] = answer considering first i rows/chars and first j cols/chars.",
+                "Fill the table row by row (or column by column).",
+                "Transitions usually look left (dp[i][j-1]), up (dp[i-1][j]), or diagonal (dp[i-1][j-1]).",
+                "Common problems: unique grid paths, minimum path sum, edit distance, LCS.",
+            ],
+            '''\
+# Unique paths in m×n grid (only right/down moves)
+def unique_paths(m, n):
+    dp = [[1] * n for _ in range(m)]
+    for i in range(1, m):
+        for j in range(1, n):
+            dp[i][j] = dp[i-1][j] + dp[i][j-1]
+    return dp[m-1][n-1]
+
+# Longest Common Subsequence
+def lcs(s1, s2):
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i-1] == s2[j-1]:
+                dp[i][j] = dp[i-1][j-1] + 1
+            else:
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+    return dp[m][n]''',
+            "LCS diagonal = match; left/up = skip. Edit Distance: replace=diagonal+1, insert=left+1, delete=up+1.",
+            "Time O(m·n), Space O(m·n) or O(n) with rolling array",
+        )
+        _technique(
+            "🎒", "0/1 Knapsack",
+            [
+                "State: dp[i][w] = max value using first i items with capacity w.",
+                "Choice per item: skip it (dp[i-1][w]) or take it (dp[i-1][w-wt[i]] + val[i]) if wt[i]<=w.",
+                "Take the max of the two choices.",
+                "1-D optimisation: iterate weights in REVERSE so each item is used at most once.",
+            ],
+            '''\
+# 0/1 Knapsack — space-optimised to 1-D
+def knapsack(weights, values, W):
+    dp = [0] * (W + 1)
+    for w, v in zip(weights, values):
+        for cap in range(W, w - 1, -1):   # reverse!
+            dp[cap] = max(dp[cap], dp[cap - w] + v)
+    return dp[W]
+
+# Unbounded knapsack (same item multiple times) → iterate FORWARD
+def unbounded_knapsack(weights, values, W):
+    dp = [0] * (W + 1)
+    for w, v in zip(weights, values):
+        for cap in range(w, W + 1):        # forward
+            dp[cap] = max(dp[cap], dp[cap - w] + v)
+    return dp[W]''',
+            "Reverse iteration = 0/1 (each item once). Forward iteration = unbounded (item reusable). This single direction flip is the entire difference.",
+            "Time O(n·W), Space O(W)",
+        )
+        _technique(
+            "📏", "Longest Increasing Subsequence (LIS)",
+            [
+                "O(n²) DP: dp[i] = LIS ending at index i. For each i, look back at all j<i where arr[j]<arr[i].",
+                "O(n log n) Patience Sorting: maintain 'piles' list — binary search for insertion position.",
+                "len(piles) at the end = LIS length.",
+            ],
+            '''\
+# O(n²) — also reconstructable
+def lis_n2(arr):
+    n = len(arr)
+    dp = [1] * n
+    for i in range(1, n):
+        for j in range(i):
+            if arr[j] < arr[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)
+
+# O(n log n) — patience sorting (length only)
+from bisect import bisect_left
+def lis_nlogn(arr):
+    piles = []
+    for v in arr:
+        pos = bisect_left(piles, v)
+        if pos == len(piles): piles.append(v)
+        else: piles[pos] = v
+    return len(piles)''',
+            "Patience sorting gives length, not the actual subsequence. Use the O(n²) version if you need to reconstruct the sequence.",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Defining state ambiguously — write out <code>dp[i] means …</code> in English before coding.",
+            "Missing base cases (dp[0] / dp[0][0]) or accessing negative indices.",
+            "0/1 knapsack iterating forward → same item counted multiple times.",
+            "LCS confusion: diagonal move ONLY when characters match; left/up otherwise.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  GRAPHS
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[2]:
+        _overview(
+            "Graphs model relationships. Everything is either BFS (layer-by-layer) or DFS (go deep, backtrack).",
+            "Build the adjacency list first. Choose BFS for shortest paths (unweighted) and level-order problems; "
+            "DFS for reachability, cycle detection, and topological ordering. "
+            "Dijkstra when edges have non-negative weights.",
+            "BFS/DFS O(V+E), Dijkstra O((V+E) log V), Union-Find O(α(n)) ≈ O(1)",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Shortest path, minimum steps → <b>BFS</b> (unweighted) or <b>Dijkstra</b> (weighted).",
+            "Flood fill, connected components, islands → <b>DFS / BFS</b> with visited set.",
+            "Scheduling with prerequisites, course order → <b>Topological Sort</b>.",
+            "Detect cycle in undirected graph → <b>Union-Find</b> or DFS back-edge.",
+            "Detect cycle in directed graph → DFS with colour states (white/grey/black).",
+            "Minimum spanning tree → <b>Kruskal</b> (sort edges + Union-Find) or <b>Prim</b> (greedy + heap).",
+        ])
+        _sec("Techniques")
+        _technique(
+            "🌊", "BFS — Shortest Path / Level Order",
+            [
+                "Use a deque. Push start node; mark visited immediately on enqueue (not dequeue).",
+                "Process layer by layer; increment distance after each layer.",
+                "For grid problems, store (row, col) as state; explore 4 directions.",
+            ],
+            '''\
+from collections import deque
+
+def bfs_shortest(graph, start, end):
+    visited = {start}
+    q = deque([(start, 0)])       # (node, distance)
+    while q:
+        node, dist = q.popleft()
+        if node == end: return dist
+        for nb in graph[node]:
+            if nb not in visited:
+                visited.add(nb)   # mark on ENQUEUE
+                q.append((nb, dist + 1))
+    return -1
+
+# Grid BFS template
+DIRS = [(0,1),(0,-1),(1,0),(-1,0)]
+def bfs_grid(grid, sr, sc):
+    rows, cols = len(grid), len(grid[0])
+    visited = {(sr, sc)}
+    q = deque([(sr, sc, 0)])
+    while q:
+        r, c, d = q.popleft()
+        for dr, dc in DIRS:
+            nr, nc = r+dr, c+dc
+            if 0<=nr<rows and 0<=nc<cols and (nr,nc) not in visited and grid[nr][nc]!=\'#\':
+                visited.add((nr, nc))
+                q.append((nr, nc, d+1))''',
+            "Mark visited when you ENQUEUE, not dequeue — otherwise you'll enqueue the same node many times.",
+            "Time O(V+E)",
+        )
+        _technique(
+            "🌀", "DFS — Connectivity & Cycle Detection",
+            [
+                "Recursive DFS: mark visited, recurse on unvisited neighbours, unmark on backtrack (for path problems).",
+                "Directed cycle detection: use three colours — 0=unvisited, 1=in-stack (grey), 2=done (black).",
+                "Undirected cycle: pass parent to avoid false back-edges.",
+            ],
+            '''\
+# DFS — number of connected components
+def count_components(n, edges):
+    graph = [[] for _ in range(n)]
+    for u, v in edges:
+        graph[u].append(v); graph[v].append(u)
+    visited = set()
+    def dfs(node):
+        for nb in graph[node]:
+            if nb not in visited:
+                visited.add(nb); dfs(nb)
+    count = 0
+    for i in range(n):
+        if i not in visited:
+            visited.add(i); dfs(i); count += 1
+    return count
+
+# Directed cycle detection (colour DFS)
+def has_cycle(n, edges):
+    graph = [[] for _ in range(n)]
+    for u, v in edges: graph[u].append(v)
+    color = [0] * n
+    def dfs(u):
+        color[u] = 1
+        for v in graph[u]:
+            if color[v] == 1: return True    # back-edge → cycle
+            if color[v] == 0 and dfs(v): return True
+        color[u] = 2
+        return False
+    return any(dfs(i) for i in range(n) if color[i] == 0)''',
+            "Recursive DFS can hit Python's recursion limit on large graphs. Use an explicit stack for safety.",
+        )
+        _technique(
+            "📐", "Topological Sort (Kahn's BFS)",
+            [
+                "Build in-degree count for every node.",
+                "Seed the queue with all zero-in-degree nodes.",
+                "Pop a node, add to result, decrement neighbours' in-degree; enqueue any that reach 0.",
+                "If result length < n, a cycle exists.",
+            ],
+            '''\
+from collections import deque
+
+def topo_sort(n, prereqs):
+    graph = [[] for _ in range(n)]
+    indegree = [0] * n
+    for a, b in prereqs:
+        graph[b].append(a)
+        indegree[a] += 1
+    q = deque(i for i in range(n) if indegree[i] == 0)
+    order = []
+    while q:
+        node = q.popleft()
+        order.append(node)
+        for nb in graph[node]:
+            indegree[nb] -= 1
+            if indegree[nb] == 0:
+                q.append(nb)
+    return order if len(order) == n else []   # [] = cycle detected''',
+            "Kahn's naturally detects cycles: if the output order is shorter than n, a cycle prevented some nodes from reaching in-degree 0.",
+            "Time O(V+E)",
+        )
+        _technique(
+            "🗺", "Dijkstra's Algorithm",
+            [
+                "Min-heap of (distance, node). Start with (0, source).",
+                "Pop the smallest distance node; skip if already finalised.",
+                "Relax all outgoing edges: if dist[node] + weight < dist[nb], push (new_dist, nb).",
+                "Only works with NON-NEGATIVE edge weights.",
+            ],
+            '''\
+import heapq
+
+def dijkstra(n, edges, src):
+    graph = [[] for _ in range(n)]
+    for u, v, w in edges:
+        graph[u].append((v, w))
+    dist = [float("inf")] * n
+    dist[src] = 0
+    heap = [(0, src)]                    # (distance, node)
+    while heap:
+        d, u = heapq.heappop(heap)
+        if d > dist[u]: continue         # stale entry — skip
+        for v, w in graph[u]:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                heapq.heappush(heap, (dist[v], v))
+    return dist''',
+            "The 'stale entry' check (<code>if d > dist[u]: continue</code>) is essential — without it you'll reprocess nodes with outdated distances.",
+            "Time O((V+E) log V)",
+        )
+        _technique(
+            "🔗", "Union-Find (DSU)",
+            [
+                "Two operations: find(x) — which component does x belong to; union(x, y) — merge components.",
+                "Path compression: point every node directly to its root during find.",
+                "Union by rank: always attach the smaller tree under the larger.",
+                "Use for: Kruskal's MST, detecting cycles in undirected graphs, grouping problems.",
+            ],
+            '''\
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+        self.components = n
+
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])   # path compression
+        return self.parent[x]
+
+    def union(self, x, y):
+        rx, ry = self.find(x), self.find(y)
+        if rx == ry: return False        # already connected
+        if self.rank[rx] < self.rank[ry]: rx, ry = ry, rx
+        self.parent[ry] = rx
+        if self.rank[rx] == self.rank[ry]: self.rank[rx] += 1
+        self.components -= 1
+        return True''',
+            "If union() returns False for an edge in an undirected graph, that edge creates a cycle.",
+            "Time O(α(n)) ≈ O(1) per operation",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "BFS: marking visited on dequeue instead of enqueue → exponential re-enqueueing.",
+            "Dijkstra with negative weights → use Bellman-Ford instead (O(VE)).",
+            "Topological sort on undirected graphs → always use directed graph formulation.",
+            "DFS recursion depth: Python default is 1000; set <code>sys.setrecursionlimit()</code> or use iterative DFS.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  GREEDY
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[3]:
+        _overview(
+            "Greedy makes the locally optimal choice at each step — and it works when local optimum = global optimum.",
+            "Greedy is hard to identify but fast to code. The key is the <b>exchange argument</b>: prove that swapping "
+            "any two adjacent choices in your greedy order can only make things worse (or equal). "
+            "If you can prove that, greedy is correct.",
+            "Usually O(n log n) due to sorting; O(n) processing after",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Intervals / scheduling: maximize activities or minimize overlaps → sort by finish time.",
+            "Optimal merge / Huffman: combine smallest items first → use min-heap.",
+            "'Minimize maximum' or 'maximize minimum' → try binary search on the answer instead.",
+            "Coin change with specific denominations (e.g., real currency) → greedy by largest coin.",
+            "Jump game, gas station — local feasibility implies global feasibility.",
+        ])
+        _sec("Techniques")
+        _technique(
+            "📅", "Interval Scheduling / Activity Selection",
+            [
+                "Goal: select the maximum number of non-overlapping intervals.",
+                "Sort ALL intervals by their END time (finish time).",
+                "Greedily pick the first interval; then pick the next one whose start >= last end.",
+                "Proof: finishing earliest leaves the most room for future activities.",
+            ],
+            '''\
+def max_activities(intervals):
+    intervals.sort(key=lambda x: x[1])     # sort by finish time
+    count = 0
+    last_end = float("-inf")
+    for start, end in intervals:
+        if start >= last_end:
+            count += 1
+            last_end = end
+    return count
+
+# Minimum number of meeting rooms needed
+import heapq
+def min_meeting_rooms(intervals):
+    intervals.sort(key=lambda x: x[0])     # sort by start
+    heap = []                               # min-heap of end times
+    for start, end in intervals:
+        if heap and heap[0] <= start:
+            heapq.heapreplace(heap, end)    # reuse a room
+        else:
+            heapq.heappush(heap, end)       # new room
+    return len(heap)''',
+            "Sort by FINISH time for 'max non-overlapping'. Sort by START time for 'min rooms needed'. These are different problems.",
+        )
+        _technique(
+            "🐸", "Jump Game",
+            [
+                "Track the furthest reachable index so far.",
+                "At each position, update max_reach = max(max_reach, i + jumps[i]).",
+                "If i ever exceeds max_reach, you're stuck — return False.",
+                "Variant: minimum jumps — greedily jump to the position that maximises next reach.",
+            ],
+            '''\
+def can_jump(nums):
+    max_reach = 0
+    for i, jump in enumerate(nums):
+        if i > max_reach: return False
+        max_reach = max(max_reach, i + jump)
+    return True
+
+def min_jumps(nums):
+    jumps = curr_end = farthest = 0
+    for i in range(len(nums) - 1):
+        farthest = max(farthest, i + nums[i])
+        if i == curr_end:          # end of current jump range
+            jumps += 1
+            curr_end = farthest
+    return jumps''',
+            "Min jumps: you don't commit to a specific jump — you wait until you MUST jump (when you hit curr_end), then jump to the farthest reachable point.",
+        )
+        _technique(
+            "🏗", "Optimal Merge / Huffman-style",
+            [
+                "Problem: merge N items with minimum total cost, where cost = sum of the two merged.",
+                "Always merge the two smallest items first.",
+                "Use a min-heap: push all items, repeatedly pop two, merge, push result.",
+            ],
+            '''\
+import heapq
+
+def min_cost_merge(stones):
+    heapq.heapify(stones)
+    total = 0
+    while len(stones) > 1:
+        a = heapq.heappop(stones)
+        b = heapq.heappop(stones)
+        cost = a + b
+        total += cost
+        heapq.heappush(stones, cost)
+    return total''',
+            "This works because the exchange argument holds: merging smaller items first reduces the number of times each element's cost is 'counted'.",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Greedy coin change only works for canonical coin systems (e.g., USD). For arbitrary denominations, use DP.",
+            "Sorting by start time instead of finish time in activity selection — a classic mistake.",
+            "Assuming greedy works without proof — always sketch the exchange argument.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  HEAP
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[4]:
+        _overview(
+            "A heap gives you the min (or max) element in O(1) and insertion/deletion in O(log n). Use it when you repeatedly need the extreme element.",
+            "Python's <code>heapq</code> is a min-heap. For max-heap, negate values. "
+            "Heaps shine in problems involving 'top K', streaming data, or repeatedly merging sorted sequences.",
+            "Push/pop O(log n), peek O(1), heapify O(n)",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "K-th largest / smallest element in array or stream.",
+            "Merge K sorted lists or arrays.",
+            "Sliding window maximum (use deque) or minimum.",
+            "Median of a stream → two heaps.",
+            "Task scheduling with cooldowns / priorities.",
+        ])
+        _sec("Techniques")
+        _technique(
+            "🏆", "K-th Largest / Top K Elements",
+            [
+                "Maintain a min-heap of size K.",
+                "For each element: push to heap; if heap grows beyond K, pop the minimum.",
+                "After processing all elements, heap[0] is the K-th largest.",
+                "Alternative: heapify all, then pop K times — O(n + k log n).",
+            ],
+            '''\
+import heapq
+
+def kth_largest(nums, k):
+    heap = []
+    for v in nums:
+        heapq.heappush(heap, v)
+        if len(heap) > k:
+            heapq.heappop(heap)        # evict the smallest
+    return heap[0]                     # K-th largest
+
+# Top K frequent elements
+from collections import Counter
+def top_k_frequent(nums, k):
+    freq = Counter(nums)
+    # min-heap on frequency; keep K largest
+    heap = []
+    for num, cnt in freq.items():
+        heapq.heappush(heap, (cnt, num))
+        if len(heap) > k: heapq.heappop(heap)
+    return [num for _, num in heap]''',
+            "Size-K min-heap for K largest is O(n log k), beating the O(n log n) sort when k << n.",
+        )
+        _technique(
+            "🔀", "Merge K Sorted Lists",
+            [
+                "Push the first element of each list into a min-heap as (value, list_index, elem_index).",
+                "Pop the minimum; add it to the result; push the next element from the same list.",
+                "Stop when heap is empty.",
+            ],
+            '''\
+import heapq
+
+def merge_k_sorted(lists):
+    heap = []
+    for i, lst in enumerate(lists):
+        if lst:
+            heapq.heappush(heap, (lst[0], i, 0))
+    result = []
+    while heap:
+        val, i, j = heapq.heappop(heap)
+        result.append(val)
+        if j + 1 < len(lists[i]):
+            heapq.heappush(heap, (lists[i][j+1], i, j+1))
+    return result''',
+            "The heap always holds exactly one element per non-exhausted list — so its size never exceeds K.",
+            "Time O(N log K) where N = total elements",
+        )
+        _technique(
+            "⚖", "Find Median from Data Stream (Two Heaps)",
+            [
+                "Keep a max-heap for the lower half, min-heap for the upper half.",
+                "Balance so that max_heap has at most 1 more element than min_heap.",
+                "Median = max_heap top (odd total) or average of both tops (even total).",
+            ],
+            '''\
+import heapq
+
+class MedianFinder:
+    def __init__(self):
+        self.lo = []   # max-heap (negate for Python)
+        self.hi = []   # min-heap
+
+    def add_num(self, num):
+        heapq.heappush(self.lo, -num)
+        # ensure every lo element <= every hi element
+        heapq.heappush(self.hi, -heapq.heappop(self.lo))
+        # balance sizes: lo may have 1 extra
+        if len(self.hi) > len(self.lo):
+            heapq.heappush(self.lo, -heapq.heappop(self.hi))
+
+    def find_median(self):
+        if len(self.lo) > len(self.hi):
+            return -self.lo[0]
+        return (-self.lo[0] + self.hi[0]) / 2''',
+            "Negate values for the max-heap since Python only has min-heap. The two-heap invariant guarantees O(log n) add and O(1) median.",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Python max-heap: negate all values when pushing; negate again when reading.",
+            "K-th largest ≠ K-th from top of a sorted array — double-check the definition.",
+            "Sliding window max with a heap still includes stale elements — use a <code>deque</code> (monotonic queue) instead.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  STACK
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[5]:
+        _overview(
+            "A stack remembers history in LIFO order — perfect when the answer for the current element depends on the nearest un-resolved previous element.",
+            "The monotonic stack is the most powerful stack pattern: maintain an increasing or decreasing stack "
+            "and whenever the invariant breaks, the popped element's answer is the current element. "
+            "Recognize it when you see 'next greater', 'previous smaller', or 'largest rectangle'.",
+            "All stack patterns run in O(n) — each element is pushed and popped at most once",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Next greater / next smaller element → <b>Monotonic stack</b>.",
+            "Largest rectangle in histogram / maximal rectangle → monotonic stack.",
+            "Balanced parentheses / valid expression → plain stack.",
+            "Evaluate expression with precedence (calculator) → two stacks (ops + nums).",
+            "Iterative DFS / backtracking → explicit stack.",
+        ])
+        _sec("Techniques")
+        _technique(
+            "📉", "Monotonic Stack — Next Greater Element",
+            [
+                "Maintain a stack of indices whose 'next greater' hasn't been found yet.",
+                "For each element: while stack top < current element, pop — current element IS the answer for popped index.",
+                "Push current index onto stack.",
+                "Remaining indices in stack have no next greater element (answer = -1).",
+            ],
+            '''\
+def next_greater(arr):
+    n = len(arr)
+    result = [-1] * n
+    stack = []                      # indices of unresolved elements
+    for i, v in enumerate(arr):
+        while stack and arr[stack[-1]] < v:
+            idx = stack.pop()
+            result[idx] = v         # v is the next greater for idx
+        stack.append(i)
+    return result
+
+# Previous smaller element (mirror — scan left to right, keep increasing stack)
+def prev_smaller(arr):
+    result = [-1] * len(arr)
+    stack = []
+    for i, v in enumerate(arr):
+        while stack and arr[stack[-1]] >= v:
+            stack.pop()
+        result[i] = arr[stack[-1]] if stack else -1
+        stack.append(i)
+    return result''',
+            "Decreasing stack → next greater. Increasing stack → next smaller. Circular array: iterate 2×n with index % n.",
+        )
+        _technique(
+            "📊", "Largest Rectangle in Histogram",
+            [
+                "For each bar, the rectangle width extends left and right until a shorter bar is hit.",
+                "Use a monotonic increasing stack of indices.",
+                "When you pop index i (because current bar is shorter), width = current_idx − stack_top − 1.",
+                "Sentinel: append height 0 at end to flush all remaining bars.",
+            ],
+            '''\
+def largest_rectangle(heights):
+    heights = heights + [0]          # sentinel flushes the stack
+    stack = [-1]                     # sentinel index
+    max_area = 0
+    for i, h in enumerate(heights):
+        while stack[-1] != -1 and heights[stack[-1]] >= h:
+            height = heights[stack.pop()]
+            width  = i - stack[-1] - 1
+            max_area = max(max_area, height * width)
+        stack.append(i)
+    return max_area''',
+            "The -1 sentinel avoids an empty-stack check. When you pop, the new stack top is the 'previous smaller bar' — so width = i − prev_smaller − 1.",
+            "Time O(n), Space O(n)",
+        )
+        _technique(
+            "()", "Valid Parentheses & Expression Evaluation",
+            [
+                "Parentheses: push open brackets; on close bracket, check stack top matches.",
+                "Calculator: two stacks — one for numbers, one for operators. Apply operators in precedence order.",
+                "Simpler calc: evaluate left-to-right; use stack to handle '+'/'-' with parentheses.",
+            ],
+            '''\
+# Valid parentheses
+def is_valid(s):
+    match = {")": "(", "]": "[", "}": "{"}
+    stack = []
+    for c in s:
+        if c in "([{": stack.append(c)
+        elif not stack or stack[-1] != match[c]: return False
+        else: stack.pop()
+    return not stack
+
+# Basic calculator (+, -, parentheses)
+def calculate(s):
+    stack, num, sign, result = [], 0, 1, 0
+    for c in s:
+        if c.isdigit():
+            num = num * 10 + int(c)
+        elif c in "+-":
+            result += sign * num
+            num = 0
+            sign = 1 if c == "+" else -1
+        elif c == "(":
+            stack.append(result); stack.append(sign)
+            result = 0; sign = 1
+        elif c == ")":
+            result += sign * num; num = 0
+            result *= stack.pop()          # sign before "("
+            result += stack.pop()          # result before "("
+    return result + sign * num''',
+            "The key insight for calculator: on '(' save current (result, sign) onto stack; on ')' restore and combine.",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Monotonic stack direction: decreasing stack for next-GREATER, increasing for next-SMALLER. Drawing it out prevents confusion.",
+            "Forgetting the sentinel in histogram — some bars at the end never get popped without it.",
+            "Parentheses: check <code>not stack</code> before <code>stack[-1]</code> to avoid IndexError on unmatched close brackets.",
+        ])
+
+    # ═══════════════════════════════════════════════════════
+    #  STRING
+    # ═══════════════════════════════════════════════════════
+    with p_tabs[6]:
+        _overview(
+            "String problems usually reduce to array problems once you recognise the right abstraction — character frequency, hashing, or pointer movement.",
+            "Sliding window and two-pointer work on strings just like arrays. "
+            "Hashing (character frequency maps) enables O(1) comparison of substrings. "
+            "KMP eliminates the need for backtracking in pattern matching.",
+            "Most string patterns: O(n) time, O(1) or O(Σ) space (Σ = alphabet size, often 26)",
+        )
+        _sec("Recognition Clues")
+        _bullets([
+            "Shortest/longest substring with condition (distinct chars, all of pattern) → <b>Sliding Window</b>.",
+            "Check if two strings are anagrams, or find all anagram positions → <b>Frequency map</b>.",
+            "Is string a palindrome / find longest palindromic substring → <b>Two Pointers / Expand Around Centre</b>.",
+            "Find pattern in text efficiently → <b>KMP</b> or built-in <code>str.find()</code>.",
+            "Encode/decode or hash substrings for fast comparison → <b>Rolling Hash</b>.",
+        ])
+        _sec("Techniques")
+        _technique(
+            "🪟", "Sliding Window for Substrings",
+            [
+                "Maintain a window [left, right] and a frequency map of characters inside.",
+                "Expand right freely; shrink left when the window violates the condition.",
+                "Track 'have' vs 'need' counts to know when the window is valid in O(1).",
+            ],
+            '''\
+from collections import Counter
+
+# Minimum window substring containing all chars of t
+def min_window(s, t):
+    need = Counter(t)
+    have, formed = {}, 0
+    l = res_len = float("inf")
+    res = (0, 0)
+    left = 0
+    for right, c in enumerate(s):
+        have[c] = have.get(c, 0) + 1
+        if c in need and have[c] == need[c]:
+            formed += 1
+        while formed == len(need):           # valid window
+            if right - left + 1 < res_len:
+                res_len = right - left + 1
+                res = (left, right)
+            lc = s[left]
+            have[lc] -= 1
+            if lc in need and have[lc] < need[lc]:
+                formed -= 1
+            left += 1
+    return s[res[0]:res[1]+1] if res_len != float("inf") else ""''',
+            "'formed' tracks how many unique characters in t have been satisfied in the current window. Shrink only when formed == len(need).",
+            "Time O(|s| + |t|), Space O(|t|)",
+        )
+        _technique(
+            "🔤", "Anagram Detection via Frequency Map",
+            [
+                "Two strings are anagrams iff their character frequency maps are identical.",
+                "For 'find all anagram start positions': use a fixed-size sliding window of length len(p).",
+                "Slide window by 1: remove leftmost char, add new right char, compare maps.",
+                "Optimise: track a 'matches' counter instead of comparing entire maps each step.",
+            ],
+            '''\
+from collections import Counter
+
+def find_anagrams(s, p):
+    p_count = Counter(p)
+    w_count = Counter(s[:len(p)])
+    result = []
+    if w_count == p_count: result.append(0)
+
+    for i in range(len(p), len(s)):
+        # slide window
+        new_c, old_c = s[i], s[i - len(p)]
+        w_count[new_c] += 1
+        w_count[old_c] -= 1
+        if w_count[old_c] == 0: del w_count[old_c]
+        if w_count == p_count:
+            result.append(i - len(p) + 1)
+    return result''',
+            "Comparing two Counter objects is O(Σ), not O(n) — so the overall algorithm is O(n·Σ). For Σ=26 this is effectively O(n).",
+        )
+        _technique(
+            "🪞", "Palindrome — Expand Around Centre",
+            [
+                "For each centre (n centres for odd-length, n-1 for even), expand outward while chars match.",
+                "Track the longest expansion found.",
+                "Also works as two-pointer from both ends for 'is palindrome' check.",
+            ],
+            '''\
+def longest_palindrome(s):
+    def expand(l, r):
+        while l >= 0 and r < len(s) and s[l] == s[r]:
+            l -= 1; r += 1
+        return s[l+1:r]            # last valid window
+
+    best = ""
+    for i in range(len(s)):
+        odd  = expand(i, i)        # odd-length centres
+        even = expand(i, i + 1)    # even-length centres
+        if len(odd)  > len(best): best = odd
+        if len(even) > len(best): best = even
+    return best
+
+# Check palindrome with two pointers
+def is_palindrome(s):
+    l, r = 0, len(s) - 1
+    while l < r:
+        if s[l] != s[r]: return False
+        l += 1; r -= 1
+    return True''',
+            "There are 2n−1 possible centres (n odd, n−1 even). Expanding from each is O(n) per centre → O(n²) total. Manacher's algorithm achieves O(n) but is rarely needed in interviews.",
+        )
+        _technique(
+            "🔎", "KMP Pattern Matching",
+            [
+                "Build a 'failure function' (LPS array) for the pattern: lps[i] = length of longest proper prefix of pattern[0..i] that is also a suffix.",
+                "Use lps to skip re-comparisons on mismatch instead of restarting from position 0.",
+                "Search: two pointers i (text), j (pattern). Mismatch → j = lps[j-1]. Match → both advance; if j==len(pattern), found.",
+            ],
+            '''\
+def kmp_search(text, pattern):
+    # Build LPS (failure function)
+    lps = [0] * len(pattern)
+    length, i = 0, 1
+    while i < len(pattern):
+        if pattern[i] == pattern[length]:
+            length += 1; lps[i] = length; i += 1
+        elif length:
+            length = lps[length - 1]      # backtrack in pattern
+        else:
+            lps[i] = 0; i += 1
+
+    # Search
+    matches = []
+    i = j = 0
+    while i < len(text):
+        if text[i] == pattern[j]:
+            i += 1; j += 1
+        if j == len(pattern):
+            matches.append(i - j)
+            j = lps[j - 1]
+        elif i < len(text) and text[i] != pattern[j]:
+            j = lps[j - 1] if j else (i := i + 1) or 0
+    return matches''',
+            "KMP avoids O(n·m) brute-force by never moving the text pointer backward. In practice, Python's <code>str.find()</code> is already O(n) for most inputs.",
+            "Time O(n + m), Space O(m)",
+        )
+        _sec("Common Pitfalls")
+        _bullets([
+            "Modifying a string in place — Python strings are immutable; work with a list and join at the end.",
+            "Sliding window on strings: remember to delete keys with count 0 from the frequency map, or comparisons will fail.",
+            "KMP LPS build: on mismatch, set <code>length = lps[length-1]</code>, NOT <code>length = 0</code>.",
+        ])
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB — PRACTICE JOURNAL  (GitHub-connected users only)
