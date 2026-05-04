@@ -32,6 +32,7 @@ class Question(Base):
     pattern = Column(String)
     category = Column(String, default="Mixed")
     difficulty = Column(String, default="Medium")
+    hint = Column(String, nullable=True)
 
     logs = relationship("PracticeLog", back_populates="question", cascade="all, delete")
     progress = relationship("UserQuestionProgress", back_populates="question", cascade="all, delete")
@@ -74,6 +75,7 @@ class PracticeLog(Base):
     code = Column(String, default="")
     time_taken = Column(Integer, default=0)
     correct = Column(Boolean, default=True)
+    hint_used = Column(Boolean, default=False)
 
     question = relationship("Question", back_populates="logs")
     user = relationship("User", back_populates="logs")

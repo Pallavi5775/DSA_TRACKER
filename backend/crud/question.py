@@ -56,6 +56,7 @@ def _question_to_dict(q: Question, progress: UserQuestionProgress | None, user_l
         "pattern": q.pattern,
         "category": q.category,
         "difficulty": q.difficulty,
+        "hint": q.hint,
         **d,
         "total_time_spent": sum(log.time_taken for log in user_logs) // 60,
         "logs": [
@@ -67,6 +68,7 @@ def _question_to_dict(q: Question, progress: UserQuestionProgress | None, user_l
                 "code": log.code,
                 "time_taken": log.time_taken,
                 "correct": log.correct,
+                "hint_used": log.hint_used,
             }
             for log in user_logs
         ],
@@ -215,6 +217,7 @@ async def create_question(db: AsyncSession, data, user_id: int):
         pattern=data.pattern,
         category=data.category,
         difficulty=data.difficulty,
+        hint=data.hint if hasattr(data, "hint") else None,
     )
     db.add(q)
     await db.commit()
@@ -231,6 +234,8 @@ async def update_question(db: AsyncSession, qid: int, data, user_id: int):
     q.pattern = data.pattern
     q.category = data.category
     q.difficulty = data.difficulty
+    if hasattr(data, "hint"):
+        q.hint = data.hint
     await db.commit()
     await db.refresh(q)
     progress = (await db.execute(
@@ -275,6 +280,7 @@ async def add_log(db: AsyncSession, qid: int, log_data: dict, user_id: int):
         code=log_data.get("code", ""),
         time_taken=min(log_data.get("time_taken", 0), 3600),
         correct=log_data.get("correct", True),
+        hint_used=log_data.get("hint_used", False),
     )
     db.add(log)
     await db.commit()
@@ -295,6 +301,13 @@ async def add_log(db: AsyncSession, qid: int, log_data: dict, user_id: int):
         progress.next_revision = first_revision_date(log.date, practice_days)
     else:
         progress.next_revision = compute_next_revision(log.date, new_interval, practice_days)
+
+    # Update coverage and set a preliminary revision_status (AI validation will override)
+    progress.coverage_status = "Covered"
+    if progress.revision_status == "Pending":
+        acc = calculate_accuracy(user_logs)
+        progress.revision_status = "Mastered" if acc >= 90 else "Needs Work"
+
     await db.commit()
 
     return _question_to_dict(q, progress, user_logs)
@@ -377,6 +390,10 @@ async def validate_question(db: AsyncSession, qid: int, user_id: int):
     question_dict = _question_to_dict(q, p, user_logs)
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    latest_log = user_logs[-1] if user_logs else None
+    hint_used_this_session = latest_log.hint_used if latest_log else False
+    hint_text = q.hint or "(none)"
+
     prompt = f"""
 You are an expert DSA Tutor and Spaced Repetition System (SRS).
 Your task is to analyze a student's session and update the question metadata.
@@ -387,6 +404,7 @@ Your task is to analyze a student's session and update the question metadata.
 ### STUDENT'S SELF-REFLECTION (use these to calibrate accuracy):
 - **Notes (key insights the student wrote):** {p.notes or "(none)"}
 - **My Gap Analysis (student's own weakness assessment):** {p.my_gap_analysis or "(none)"}
+- **Hint used this session:** {"YES — the student viewed the hint before/during solving. Apply up to -15 points to accuracy to reflect reduced independence. Hint was: " + hint_text if hint_used_this_session else "No"}
 
 ### TASK 1: VALIDATION
 - If logic AND code AND notes AND my_gap_analysis are all empty or gibberish, mark `correct = false`.

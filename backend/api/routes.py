@@ -140,6 +140,22 @@ async def update_status(
     return await crud.update_question_status(db, qid, category, coverage_status, revision_status, user_id)
 
 
+@router.patch("/questions/{qid}/hint")
+async def update_hint(
+    qid: int,
+    hint: str = Body(""),
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(require_admin),
+):
+    from backend.db.models import Question as QuestionModel
+    q = (await db.execute(select(QuestionModel).where(QuestionModel.id == qid))).scalar_one_or_none()
+    if q is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    q.hint = hint or None
+    await db.commit()
+    return {"status": "ok"}
+
+
 @router.patch("/questions/{qid}/notes")
 async def update_notes(
     qid: int,

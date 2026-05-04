@@ -626,6 +626,7 @@ with tabs[0]:
 
             acc_col   = "#16a34a" if acc_val >= 80 else "#d97706" if acc_val >= 60 else "#db2777"
             acc_bg    = "#dcfce7" if acc_val >= 80 else "#fef3c7" if acc_val >= 60 else "#fce7f3"
+            hint_icon = '<span title="Hint available" style="font-size:.75em;margin-left:4px;">💡</span>' if row.get('hint') else ""
             card_html = (
                 f'<div style="background:#fff;border:1.5px solid #ede9fe;border-radius:16px;'
                 f'padding:16px 20px;margin-bottom:10px;box-shadow:0 1px 6px rgba(219,39,119,.04);">'
@@ -640,7 +641,7 @@ with tabs[0]:
                 f'    font-size:.82em;font-weight:800;color:{acc_col};white-space:nowrap;'
                 f'    border:1.5px solid {acc_col}22;">🎯 {acc_val:.0f}%</div>'
                 f'  </div>'
-                f'  <div style="font-weight:700;font-size:.97em;color:#1e1b4b;margin-bottom:8px;">{row["title"]}</div>'
+                f'  <div style="font-weight:700;font-size:.97em;color:#1e1b4b;margin-bottom:8px;">{row["title"]}{hint_icon}</div>'
                 f'  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
                 f'    <span>{acc_bar_html(acc_val)}</span>'
                 f'    <span style="font-size:.77em;color:#6b7280;">📅 {next_rev}</span>'
@@ -1475,6 +1476,47 @@ if st.session_state.active_qid:
                     unsafe_allow_html=True
                 )
 
+            # ── Hint section ─────────────────────────────────────────────────
+            hint_key = f"hint_used_{q['id']}"
+            if not st.session_state.get(hint_key):
+                st.session_state[hint_key] = False
+
+            if q.get('hint'):
+                hint_col, _ = st.columns([1, 3])
+                if hint_col.button("💡 Show Hint", key=f"show_hint_{q['id']}", use_container_width=True):
+                    st.session_state[hint_key] = True
+                if st.session_state[hint_key]:
+                    st.markdown(
+                        f'<div style="background:#2a1050;border-left:3px solid #f59e0b;'
+                        f'border-radius:0 10px 10px 0;padding:10px 14px;font-size:.85em;'
+                        f'color:#fef3c7;margin-bottom:10px;line-height:1.7;">'
+                        f'<div style="font-size:.6em;font-weight:700;letter-spacing:.8px;'
+                        f'text-transform:uppercase;color:#f59e0b;margin-bottom:4px;">💡 Hint'
+                        f'<span style="color:#ef4444;margin-left:8px;">'
+                        f'(-20% accuracy penalty)</span></div>'
+                        f'{q["hint"]}</div>',
+                        unsafe_allow_html=True
+                    )
+
+            # Admin: edit hint ────────────────────────────────────────────────
+            if is_admin:
+                with st.expander("✏️ Edit Hint (Admin)", expanded=False):
+                    admin_hint = st.text_area(
+                        "hint_edit", value=q.get('hint') or '',
+                        key=f"hint_edit_{q['id']}", height=80,
+                        label_visibility="collapsed",
+                        placeholder="Add a hint that users can reveal during practice..."
+                    )
+                    if st.button("Save Hint", key=f"save_hint_{q['id']}", type="primary"):
+                        requests.patch(
+                            f"{API_URL}/questions/{q['id']}/hint",
+                            json={"hint": admin_hint},
+                            headers=auth_headers(),
+                        )
+                        st.session_state.pop(f"qs_cache", None)
+                        st.success("Hint saved!")
+                        st.rerun()
+
             # ── Input fields (two-column layout to use the wide sidebar) ────────
             col_left, col_right = st.columns(2, gap="medium")
 
@@ -1497,14 +1539,17 @@ if st.session_state.active_qid:
             # ── Buttons ──────────────────────────────────────────────────────
             col_save, col_close = st.columns(2)
             if col_save.button("💾 Save", type="primary", use_container_width=True):
+                hint_used_flag = st.session_state.get(f"hint_used_{q['id']}", False)
                 requests.post(f"{API_URL}/questions/{q['id']}/log",
-                              json={"logic": new_logic, "code": new_code, "time_taken": elapsed, "date": _local_today()},
+                              json={"logic": new_logic, "code": new_code, "time_taken": elapsed,
+                                    "date": _local_today(), "hint_used": hint_used_flag},
                               headers=auth_headers())
                 requests.patch(f"{API_URL}/questions/{q['id']}/notes",
                                json={"notes": new_notes, "my_gap_analysis": new_gap},
                                headers=auth_headers())
                 st.session_state.ai_pending_qid   = q['id']
                 st.session_state.ai_pending_since = time.time()
+                st.session_state.pop(f"hint_used_{q['id']}", None)
                 st.rerun()
 
             if col_close.button("✖ Close", use_container_width=True):
@@ -1512,6 +1557,7 @@ if st.session_state.active_qid:
                 st.session_state.pop('start_timestamp', None)
                 st.session_state.pop('ai_pending_qid', None)
                 st.session_state.pop('ai_pending_since', None)
+                st.session_state.pop(f"hint_used_{q['id']}", None)
                 st.rerun()
 
             # ── AI Analysis Results ───────────────────────────────────────────

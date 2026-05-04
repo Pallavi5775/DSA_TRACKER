@@ -10,6 +10,7 @@ class PracticeLogOut(BaseModel):
     code: str = ""
     time_taken: int = 0
     correct: bool = True
+    hint_used: bool = False
 
     class Config:
         from_attributes = True
@@ -20,6 +21,7 @@ class QuestionCreate(BaseModel):
     pattern: str
     category: str = "Mixed"
     difficulty: str = "Medium"
+    hint: Optional[str] = None
 
 
 class QuestionOut(BaseModel):
@@ -28,6 +30,7 @@ class QuestionOut(BaseModel):
     pattern: str
     category: str
     difficulty: str
+    hint: Optional[str] = None
     coverage_status: str = "Not Covered"
     revision_status: str = "Pending"
     ease_factor: float = 2.5

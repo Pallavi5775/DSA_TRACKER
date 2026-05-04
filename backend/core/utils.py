@@ -81,11 +81,14 @@ def calculate_accuracy(logs):
     total = len(logs)
     if total == 0:
         return 0.0
-    correct = sum(
-        1 for log in logs
-        if (log.correct if hasattr(log, "correct") else log.get("correct", False))
-    )
-    return round(correct / total * 100, 2)
+    score = 0.0
+    for log in logs:
+        correct = log.correct if hasattr(log, "correct") else log.get("correct", False)
+        hint_used = log.hint_used if hasattr(log, "hint_used") else log.get("hint_used", False)
+        if correct:
+            # Hint penalty: cap contribution at 80% when hint was used
+            score += 0.8 if hint_used else 1.0
+    return round(score / total * 100, 2)
 
 
 def calculate_difficulty_from_time(time_taken: int) -> str:
