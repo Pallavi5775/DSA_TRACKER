@@ -192,6 +192,22 @@ async def update_last_log(
     return await crud.update_last_log(db, qid, user_id, logic, code, notes, my_gap_analysis)
 
 
+@router.post("/questions/{qid}/variation-review")
+async def variation_review(
+    qid: int,
+    body: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    return await crud.variation_review(
+        db, qid,
+        variation_title=body.get("variation_title", ""),
+        variation_description=body.get("variation_description", ""),
+        code=body.get("code", ""),
+        notes=body.get("notes", ""),
+    )
+
+
 @router.post("/questions/{qid}/description")
 async def get_or_generate_description(
     qid: int,

@@ -581,6 +581,64 @@ async def _upsert_questions(db: AsyncSession, questions: list) -> int:
     return added
 
 
+async def variation_review(
+    db: AsyncSession,
+    qid: int,
+    variation_title: str,
+    variation_description: str,
+    code: str,
+    notes: str,
+) -> dict:
+    result = await db.execute(select(Question).where(Question.id == qid))
+    q = result.scalar_one_or_none()
+    if q is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    if not code.strip() and not notes.strip():
+        return {"accuracy": 0, "correct": False, "feedback": "Nothing submitted — write your solution and/or notes before requesting a review."}
+
+    prompt = (
+        f"You are a strict DSA evaluator.\n"
+        f"Original problem family: '{q.title}' (Pattern: {q.pattern}, Difficulty: {q.difficulty or 'Medium'}).\n\n"
+        f"VARIATION THE STUDENT SOLVED:\n"
+        f"Title: {variation_title}\n"
+        f"Description:\n{variation_description}\n\n"
+        f"STUDENT'S CODE:\n{code or '(not provided)'}\n\n"
+        f"STUDENT'S NOTES / APPROACH:\n{notes or '(not provided)'}\n\n"
+        "Evaluate:\n"
+        "1. Does the code/approach correctly solve the stated variation?\n"
+        "2. Is the algorithm optimal for this pattern?\n"
+        "3. Are edge cases handled?\n"
+        "4. Does the student's notes show understanding of the key concept?\n\n"
+        "Return ONLY valid JSON:\n"
+        '{"accuracy": <0-100>, "correct": <true|false>, '
+        '"feedback": "<2-3 sentences: what they did well, what is wrong/missing, one concrete improvement>"}'
+    )
+
+    try:
+        import openai
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a strict but fair DSA evaluator. Output only valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0,
+        )
+        import json as _json
+        data = _json.loads(response.choices[0].message.content.strip())
+        return {
+            "accuracy": float(data.get("accuracy", 0)),
+            "correct":  bool(data.get("correct", False)),
+            "feedback": str(data.get("feedback", "")),
+        }
+    except Exception as e:
+        return {"accuracy": 0, "correct": False, "feedback": f"Review failed: {e}"}
+
+
 async def generate_question_description(db: AsyncSession, qid: int) -> dict:
     result = await db.execute(select(Question).where(Question.id == qid))
     q = result.scalar_one_or_none()

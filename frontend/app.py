@@ -3021,6 +3021,148 @@ if st.session_state.active_qid:
                 chat_msgs.append({"role": "assistant", "content": reply, "is_variation": True})
                 st.rerun()
 
+            # ── Variation Practice Panel ──────────────────────────────────────
+            var_messages = [m for m in chat_msgs if m.get("is_variation") and m["role"] == "assistant"]
+            if var_messages:
+                import re as _re
+
+                def _parse_variations(raw):
+                    parts = _re.split(r'\*\*Variation \d+:\s*', raw)
+                    out = []
+                    for part in parts[1:]:
+                        end = part.find('**')
+                        title = part[:end].strip() if end != -1 else part.split('\n')[0].strip()
+                        body  = part[end+2:].strip() if end != -1 else '\n'.join(part.split('\n')[1:]).strip()
+                        if title:
+                            out.append({"title": title, "description": body})
+                    return out
+
+                latest_vars = _parse_variations(var_messages[-1]["content"])
+
+                if latest_vars:
+                    st.markdown(
+                        '<hr style="border:none;border-top:1px solid #3d1a72;margin:14px 0 10px;">'
+                        '<div style="font-size:.6em;font-weight:700;letter-spacing:1px;'
+                        'text-transform:uppercase;color:#a78bfa;margin-bottom:8px;">📝 Practice a Variation</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    sel_key = f"var_sel_{q['id']}"
+                    dropdown_opts = ["— select a variation —"] + [
+                        f"Variation {i+1}: {v['title']}" for i, v in enumerate(latest_vars)
+                    ]
+                    selected_label = st.selectbox(
+                        "var_drop", dropdown_opts,
+                        key=sel_key, label_visibility="collapsed",
+                    )
+
+                    if selected_label != "— select a variation —":
+                        sel_idx = dropdown_opts.index(selected_label) - 1
+                        sel_var = latest_vars[sel_idx]
+
+                        # ── Description card ─────────────────────────────────
+                        desc_html = sel_var["description"].replace("\n", "<br>")
+                        desc_html = _re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', desc_html)
+                        desc_html = desc_html.replace("🔑 Twist:", '<span style="color:#fbbf24;font-weight:700;">🔑 Twist:</span>')
+                        st.markdown(
+                            f'<div style="background:#1a0a2e;border:1.5px solid #5b21b6;'
+                            f'border-radius:12px;padding:12px 16px;font-size:.83em;'
+                            f'color:#e9d5ff;line-height:1.75;margin-bottom:10px;">'
+                            f'{desc_html}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        # ── Two-column: notes + code ──────────────────────────
+                        vl, vr = st.columns(2, gap="small")
+                        with vl:
+                            st.markdown(
+                                '<p style="font-size:.6em;font-weight:700;letter-spacing:1px;'
+                                'text-transform:uppercase;color:#6d28d9;margin:6px 0 3px;">💡 Approach / Notes</p>',
+                                unsafe_allow_html=True,
+                            )
+                            var_notes = st.text_area(
+                                "vn", key=f"var_notes_{q['id']}_{sel_idx}",
+                                height=200, label_visibility="collapsed",
+                                placeholder="Describe your approach — data structure, algorithm, edge cases…",
+                            )
+
+                        with vr:
+                            st.markdown(
+                                '<p style="font-size:.6em;font-weight:700;letter-spacing:1px;'
+                                'text-transform:uppercase;color:#6d28d9;margin:6px 0 3px;">💻 Code</p>',
+                                unsafe_allow_html=True,
+                            )
+                            if _ACE_AVAILABLE:
+                                var_code = st_ace(
+                                    value="",
+                                    language="python",
+                                    theme="monokai",
+                                    key=f"var_ace_{q['id']}_{sel_idx}",
+                                    font_size=12,
+                                    tab_size=4,
+                                    show_gutter=True,
+                                    show_print_margin=False,
+                                    auto_update=True,
+                                    height=200,
+                                    placeholder="# Your solution…",
+                                )
+                            else:
+                                var_code = st.text_area(
+                                    "vc", key=f"var_code_{q['id']}_{sel_idx}",
+                                    height=200, label_visibility="collapsed",
+                                    placeholder="# Your solution…",
+                                )
+
+                        # ── Submit button ─────────────────────────────────────
+                        rev_key = f"var_result_{q['id']}_{sel_idx}"
+                        if st.button(
+                            "🎯 Submit for Review",
+                            key=f"var_submit_{q['id']}_{sel_idx}",
+                            type="primary",
+                            use_container_width=True,
+                        ):
+                            with st.spinner("Evaluating…"):
+                                try:
+                                    r = requests.post(
+                                        f"{API_URL}/questions/{q['id']}/variation-review",
+                                        json={
+                                            "variation_title":       sel_var["title"],
+                                            "variation_description": sel_var["description"],
+                                            "code":  var_code  or "",
+                                            "notes": var_notes or "",
+                                        },
+                                        headers=auth_headers(),
+                                        timeout=25,
+                                    )
+                                    st.session_state[rev_key] = r.json() if r.status_code == 200 else {"accuracy": 0, "correct": False, "feedback": "Review failed."}
+                                except Exception as e:
+                                    st.session_state[rev_key] = {"accuracy": 0, "correct": False, "feedback": f"Error: {e}"}
+                            st.rerun()
+
+                        # ── Review result card ────────────────────────────────
+                        result = st.session_state.get(rev_key)
+                        if result:
+                            acc  = float(result.get("accuracy", 0))
+                            corr = result.get("correct", False)
+                            fb   = result.get("feedback", "")
+                            acc_col  = "#86efac" if acc >= 80 else "#fcd34d" if acc >= 60 else "#f9a8d4"
+                            verd_col = "#86efac" if corr else "#f9a8d4"
+                            verd_txt = "✅ Correct" if corr else "❌ Needs Work"
+                            st.markdown(
+                                f'<div style="background:#2a1050;border:1px solid #3d1a72;'
+                                f'border-radius:12px;padding:12px 16px;margin-top:6px;">'
+                                f'<div style="display:flex;justify-content:space-between;'
+                                f'align-items:center;margin-bottom:8px;">'
+                                f'  <span style="font-weight:700;font-size:.9em;color:{verd_col};">{verd_txt}</span>'
+                                f'  <span style="background:{acc_col}22;border:1px solid {acc_col};'
+                                f'  border-radius:20px;padding:2px 10px;font-size:.82em;'
+                                f'  font-weight:800;color:{acc_col};">🎯 {acc:.0f}%</span>'
+                                f'</div>'
+                                f'<div style="font-size:.82em;color:#e9d5ff;line-height:1.7;">{fb}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
             # ── AI Analysis Results ───────────────────────────────────────────
             pending_qid = st.session_state.get("ai_pending_qid")
             if pending_qid == q['id']:
