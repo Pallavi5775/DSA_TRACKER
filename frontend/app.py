@@ -2467,6 +2467,23 @@ if has_github and JOURNAL_IDX is not None:
                         with st.expander("🤖 AI Insight", expanded=False):
                             st.markdown(insight_txt)
 
+                    # Link back to chat area for revision
+                    q_title = s.get("question", "")
+                    matched_q = next(
+                        (q for q in questions if q.get("title", "") == q_title), None
+                    )
+                    if matched_q:
+                        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                        if st.button(
+                            "↩ Revise in Chat",
+                            key=f"jrn_revise_{s.get('date','')}_{q_title[:30]}",
+                            help="Open this question in the practice & chat area",
+                        ):
+                            st.session_state.active_qid    = int(matched_q["id"])
+                            st.session_state.view_last_qid = None
+                            st.session_state.pop("start_timestamp", None)
+                            st.rerun()
+
             # ── Pagination controls ───────────────────────────────────────────
             if total_pages > 1:
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
