@@ -251,90 +251,158 @@ function PatternView({
 const PATTERN_INFO: Record<string, { strategy: string[]; pitfalls: string[]; templates: { name: string; code: string }[] }> = {
   'Binary Search': {
     strategy: [
-      'Precondition: the search space must be SORTED or have a monotonic property (not just arrays — ranges of values work too).',
-      'Define the invariant: answer always lives in [lo, hi]. Shrink the window each iteration without losing the answer.',
-      'Three distinct templates: (1) exact match → while (lo <= hi); (2) leftmost/lower-bound → while (lo < hi), hi = mid; (3) rightmost/upper-bound → while (lo < hi), lo = mid + 1.',
-      'Binary Search on Answer: when you can\'t binary-search the array itself, binary-search the answer space. Define a feasibility predicate check(mid) and find the smallest (or largest) mid where it returns true.',
-      'Predicate mindset: reformulate every problem as "find the boundary between False … False True … True" — binary search finds that boundary in O(log N).',
-      'For 2-D matrices with row/column sort: flatten index (row = mid/cols, col = mid%cols) for O(log(m·n)) search.',
-      'When result is a floating-point value (e.g., sqrt), run a fixed number of iterations (≈ 100) instead of checking lo < hi.',
+      '━━ CORE IDEA ━━',
+      'Binary search eliminates half the search space each step using a monotonic property. On N elements: ⌈log₂N⌉ comparisons → O(log N) time, O(1) space. It is one of the most misimplemented algorithms — always derive from a template.',
+      'The search space does NOT need to be a physical array. It can be any range of integers or floats where you can evaluate a yes/no predicate in O(T) time → total O(T log N).',
+      '━━ PRECONDITION: MONOTONICITY ━━',
+      'Binary search requires a monotonic predicate P(x): some threshold k exists such that P(x) = false for all x < k and P(x) = true for all x ≥ k (or the mirror). If the array has duplicates or is not fully sorted, verify monotonicity still holds for your predicate.',
+      'Reformulate every BS problem as: "find the boundary between [F F F T T T]". Binary search finds that exact boundary in O(log N). The answer is always the first T (lower bound) or last F (upper bound).',
+      '━━ THE 3 TEMPLATES ━━',
+      'Template 1 — EXACT MATCH: while (lo <= hi). Use when you know the target exists or need to explicitly return -1. mid = lo + (hi - lo) / 2. If match → return mid. Shrink toward target: lo = mid+1 or hi = mid-1.',
+      'Template 2 — LOWER BOUND (first True): while (lo < hi), hi = mid when P(mid) true, lo = mid+1 when false. Returns lo = first index where P is true. Set hi = n (not n-1) to allow "not found" at index n.',
+      'Template 3 — UPPER BOUND (last True): while (lo < hi), lo = mid+1 when P(mid) true, hi = mid when false. Returns lo-1 = last index where P is true. Must use mid = lo + (hi - lo + 1) / 2 (ceiling) to avoid infinite loop when hi = lo+1.',
+      '━━ BINARY SEARCH ON ANSWER ━━',
+      'When you cannot BS the input array itself, BS the answer space. Ask: "Is answer X feasible?" Write check(X) → bool. The feasible region is monotonic (if X works, X+1 also works). BS finds the minimum feasible X.',
+      'Setting lo/hi for answer BS: lo = minimum possible answer (often max element or 1), hi = maximum possible answer (often sum of array or 10^9). Never set hi smaller than the true answer or you will miss it.',
+      'Maximise variant: find the LARGEST X where check(X) = true. Flip the lower-bound template → upper-bound. lo = mid+1 when feasible, hi = mid when not.',
+      'Signal words for BS on answer: "minimum speed / days / capacity / pages / force / distance", "given K operations find minimum", "at most K allowed", "feasible within constraint".',
+      '━━ PROBLEM VARIANTS ━━',
+      'Rotated sorted array: one half is always cleanly sorted. Compare arr[lo] with arr[mid] to identify the sorted half, then check if the target falls inside it.',
+      '2-D matrix (row-sorted, row-start > prev-row-end): flatten to 1-D. row = mid / cols, col = mid % cols. O(log(m·n)).',
+      'Peak element: any peak works → O(log N). If arr[mid] < arr[mid+1], peak is right of mid → lo = mid+1. Else peak is mid or left → hi = mid.',
+      'Infinite / unbounded array: find upper bound first by doubling — lo = 1, hi = 1, while arr[hi] < target: hi *= 2. Then standard lower-bound between lo and hi.',
+      'Floating-point answer (sqrt, nth-root): loop a fixed 100 iterations instead of lo < hi. Each iteration halves the error; after 100 steps error < 10⁻³⁰.',
+      'First/last occurrence: lower-bound gives first index, upper-bound gives last. Count = upper - lower.',
+      '━━ COMPLEXITY & CORRECTNESS ━━',
+      'Time: O(log N) iterations × O(T) per predicate. Space: O(1) iterative, O(log N) recursive (stack). Always prefer iterative to avoid stack overflow on large N.',
+      'Proof of termination: every iteration either lo increases or hi decreases, so hi - lo strictly shrinks. The loop exits in at most ⌈log₂(hi - lo + 1)⌉ steps.',
     ],
     pitfalls: [
-      'Infinite loop: if hi = mid and lo never advances past mid when hi = lo + 1. Guarantee progress — at least one side must strictly shrink every iteration.',
-      'Integer overflow: always compute mid = lo + (hi - lo) / 2, never (lo + hi) / 2.',
-      'Wrong template: mixing while (lo <= hi) with lo = mid (instead of mid + 1) causes an infinite loop. Match the template exactly.',
-      'Off-by-one on the search space boundary: initialise lo and hi to cover ALL possible answers, including edge values.',
-      'Applying binary search on unsorted or non-monotonic data — validate the monotonic property first.',
-      'Forgetting to handle the case where the target does not exist (return -1 vs return lo).',
-      'For "binary search on answer": forgetting to check feasibility of the lo/hi boundary values before returning.',
+      'INTEGER OVERFLOW: mid = (lo + hi) / 2 overflows when lo + hi > Integer.MAX_VALUE. Always use mid = lo + (hi - lo) / 2.',
+      'INFINITE LOOP — wrong update: Template 2 (lower bound): if you write lo = mid instead of lo = mid+1, lo never advances when hi = lo+1. Rule: the side that is "wrong" must move strictly past mid.',
+      'INFINITE LOOP — ceiling mid: Template 3 (upper bound) with lo = mid+1 when true. When hi = lo+1, floor mid = lo, so hi = mid = lo → hi never changes. Fix: use ceiling mid = lo + (hi - lo + 1) / 2.',
+      'WRONG TEMPLATE MIX: while (lo <= hi) with lo = mid (not mid+1), or while (lo < hi) with return -1. Pick one template and use ALL its rules — boundary init, mid formula, update rule, return value.',
+      'HI INITIALISED TOO SMALL for answer BS: if hi < true answer, the search space never contains it. Think carefully: "what is the maximum possible answer?" and set hi there.',
+      'LO INITIALISED TOO LARGE: similarly, if lo > true answer, it is excluded from the start. For minimum-value problems lo is often max(arr) or 1, not 0.',
+      'NOT VALIDATING MONOTONICITY: applying BS on non-monotonic data gives random results. Ask: "if X is feasible, is X+1 also feasible?" If no, BS does not apply.',
+      'RETURNING LO VS LO-1: lower-bound returns lo (first True). Upper-bound returns lo-1 (last True). Getting this wrong gives off-by-one answers.',
+      'PREDICATE BUG IN ANSWER BS: the check() function must be correct and consistent. A bug where check(true answer) returns false causes BS to overshoot.',
+      'EDGE CASES: empty array (lo > hi immediately → return -1), all elements equal (BS still works, returns first/last), single element (one comparison).',
     ],
     templates: [
       {
-        name: 'Classic Exact Search',
+        name: 'Template 1 — Exact Match',
         code: `int lo = 0, hi = n - 1;
 while (lo <= hi) {
-    int mid = lo + (hi - lo) / 2;
+    int mid = lo + (hi - lo) / 2;   // floor, no overflow
     if (arr[mid] == target) return mid;
     else if (arr[mid] < target) lo = mid + 1;
-    else hi = mid - 1;
+    else                        hi = mid - 1;
 }
-return -1; // not found`,
+return -1; // target not found`,
       },
       {
-        name: 'Lower Bound (leftmost index where arr[i] >= target)',
-        code: `int lo = 0, hi = n; // hi = n, not n-1 (answer can be n = "not found")
+        name: 'Template 2 — Lower Bound (first index where arr[i] >= target)',
+        code: `int lo = 0, hi = n;              // hi = n: "not present" sentinel
 while (lo < hi) {
-    int mid = lo + (hi - lo) / 2;
-    if (arr[mid] < target) lo = mid + 1;
-    else hi = mid;           // mid could be the answer — don't skip it
+    int mid = lo + (hi - lo) / 2;  // floor mid
+    if (arr[mid] < target) lo = mid + 1;  // mid is too small, discard
+    else                   hi = mid;      // mid could be answer, keep
 }
-return lo; // first index where arr[lo] >= target`,
+// lo == hi == first index where arr[i] >= target
+// lo == n means target is larger than all elements
+return lo;`,
       },
       {
-        name: 'Upper Bound (rightmost index where arr[i] <= target)',
-        code: `int lo = 0, hi = n; // returns insertion point after last occurrence
+        name: 'Template 3 — Upper Bound (last index where arr[i] <= target)',
+        code: `int lo = 0, hi = n;                      // hi = n: sentinel
 while (lo < hi) {
-    int mid = lo + (hi - lo) / 2;
-    if (arr[mid] <= target) lo = mid + 1;
-    else hi = mid;
+    int mid = lo + (hi - lo + 1) / 2;   // CEILING mid — prevents infinite loop
+    if (arr[mid] <= target) lo = mid;    // mid qualifies, keep (lo = mid not mid+1)
+    else                    hi = mid - 1;
 }
-return lo - 1; // last index where arr[i] <= target`,
+// lo == last index where arr[i] <= target; lo == 0 and arr[0] > target means none
+return lo;`,
       },
       {
-        name: 'Binary Search on Answer (minimise largest piece)',
-        code: `// Example: split array into k parts, minimise the largest sum
-boolean feasible(int[] arr, int k, int maxSum) {
+        name: 'Binary Search on Answer — Minimise',
+        code: `// Pattern: find minimum X such that check(X) is true
+// check() must be monotonic: once true, stays true for all larger X
+
+boolean check(int[] arr, int k, int mid) {
     int parts = 1, cur = 0;
     for (int x : arr) {
-        if (cur + x > maxSum) { parts++; cur = 0; }
+        if (cur + x > mid) { parts++; cur = 0; }
         cur += x;
     }
-    return parts <= k;
+    return parts <= k;   // feasible with at most k splits
 }
 
-int lo = max(arr), hi = sum(arr);
+int lo = max(arr);     // minimum possible answer
+int hi = sum(arr);     // maximum possible answer
 while (lo < hi) {
     int mid = lo + (hi - lo) / 2;
-    if (feasible(arr, k, mid)) hi = mid;
-    else lo = mid + 1;
+    if (check(arr, k, mid)) hi = mid;   // feasible → try smaller
+    else                    lo = mid + 1; // not feasible → must go bigger
 }
-return lo; // minimum possible largest sum`,
+return lo; // smallest feasible answer`,
+      },
+      {
+        name: 'Binary Search on Answer — Maximise',
+        code: `// Pattern: find maximum X such that check(X) is true
+// check() must be: true for small X, false for large X
+
+boolean check(int mid) { /* return whether mid is still feasible */ }
+
+int lo = 1, hi = MAX_ANSWER;
+while (lo < hi) {
+    int mid = lo + (hi - lo + 1) / 2;  // ceiling mid
+    if (check(mid)) lo = mid;           // feasible → try larger
+    else            hi = mid - 1;       // too big → shrink
+}
+return lo; // largest feasible answer`,
       },
       {
         name: 'Search in Rotated Sorted Array',
-        code: `int lo = 0, hi = n - 1;
+        code: `// One half is always sorted — identify which, then check target
+int lo = 0, hi = n - 1;
 while (lo <= hi) {
     int mid = lo + (hi - lo) / 2;
     if (arr[mid] == target) return mid;
-    if (arr[lo] <= arr[mid]) {          // left half is sorted
-        if (arr[lo] <= target && target < arr[mid]) hi = mid - 1;
+
+    if (arr[lo] <= arr[mid]) {               // LEFT half is sorted
+        if (arr[lo] <= target && target < arr[mid])
+            hi = mid - 1;                    // target in left half
         else lo = mid + 1;
-    } else {                            // right half is sorted
-        if (arr[mid] < target && target <= arr[hi]) lo = mid + 1;
+    } else {                                 // RIGHT half is sorted
+        if (arr[mid] < target && target <= arr[hi])
+            lo = mid + 1;                    // target in right half
         else hi = mid - 1;
     }
 }
 return -1;`,
+      },
+      {
+        name: 'Peak Element (O log N)',
+        code: `// Any peak works. arr[-1] = arr[n] = -∞ (conceptually)
+int lo = 0, hi = n - 1;
+while (lo < hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (arr[mid] < arr[mid + 1]) lo = mid + 1; // slope going up → peak is right
+    else                         hi = mid;      // slope going down → peak is mid or left
+}
+return lo; // lo == hi == a peak index`,
+      },
+      {
+        name: 'Floating-Point Binary Search (sqrt)',
+        code: `// Fixed iterations instead of lo < hi to handle real-number precision
+double lo = 0, hi = x;
+for (int i = 0; i < 100; i++) {  // 100 iters → error < 10^-30
+    double mid = (lo + hi) / 2;
+    if (mid * mid <= x) lo = mid;
+    else                hi = mid;
+}
+return lo; // sqrt(x) to arbitrary precision`,
       },
     ],
   },
