@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPatternNotes, updatePatternNote, patternChat } from '../../api/client'
 import { PatternNote } from '../../types'
@@ -64,6 +64,57 @@ export default function PatternsTab() {
   )
 }
 
+function renderMd(text: string): string {
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const inline = (s: string) =>
+    esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-rose-600 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>')
+
+  const lines = text.split('\n')
+  let html = ''
+  let inCode = false
+  let codeLines: string[] = []
+  let inUl = false
+  let inOl = false
+
+  const closeList = () => {
+    if (inUl) { html += '</ul>'; inUl = false }
+    if (inOl) { html += '</ol>'; inOl = false }
+  }
+
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      if (!inCode) { closeList(); codeLines = []; inCode = true }
+      else {
+        html += `<pre class="bg-gray-900 text-green-300 text-xs p-3 rounded-xl overflow-x-auto font-mono my-2 leading-relaxed whitespace-pre"><code>${esc(codeLines.join('\n'))}</code></pre>`
+        inCode = false
+      }
+      continue
+    }
+    if (inCode) { codeLines.push(line); continue }
+    if (!line.trim()) { closeList(); html += '<div class="h-2"></div>'; continue }
+    if (line.startsWith('## ')) { closeList(); html += `<h3 class="font-bold text-sm text-rose-700 mt-3 mb-1 border-b border-rose-200 pb-0.5">${inline(line.slice(3))}</h3>`; continue }
+    if (line.startsWith('### ')) { closeList(); html += `<h4 class="font-semibold text-sm text-rose-600 mt-2 mb-0.5">${inline(line.slice(4))}</h4>`; continue }
+    if (/^[-*] /.test(line)) {
+      if (inOl) { html += '</ol>'; inOl = false }
+      if (!inUl) { html += '<ul class="list-disc pl-5 space-y-0.5 my-1">'; inUl = true }
+      html += `<li class="text-sm text-gray-700 leading-relaxed">${inline(line.slice(2))}</li>`; continue
+    }
+    if (/^\d+\. /.test(line)) {
+      if (inUl) { html += '</ul>'; inUl = false }
+      if (!inOl) { html += '<ol class="list-decimal pl-5 space-y-0.5 my-1">'; inOl = true }
+      html += `<li class="text-sm text-gray-700 leading-relaxed">${inline(line.replace(/^\d+\. /, ''))}</li>`; continue
+    }
+    closeList()
+    html += `<p class="text-sm text-gray-700 leading-relaxed">${inline(line)}</p>`
+  }
+  closeList()
+  return html
+}
+
 function PatternView({
   pattern,
   note,
@@ -76,21 +127,27 @@ function PatternView({
   const [notes, setNotes] = useState(note.notes ?? '')
   const [memo, setMemo] = useState(note.memory_techniques ?? '')
   const [dirty, setDirty] = useState(false)
+  const [editMode, setEditMode] = useState(!note.notes)
   const [chatHistory, setChatHistory] = useState<ChatMsg[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Sync from server once data loads (component mounts before query resolves)
   useEffect(() => {
     if (!dirty) {
       setNotes(note.notes ?? '')
       setMemo(note.memory_techniques ?? '')
+      if (note.notes) setEditMode(false)
     }
   }, [note.notes, note.memory_techniques])
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatHistory, chatLoading])
+
   const save = useMutation({
     mutationFn: () => updatePatternNote(pattern, notes, memo),
-    onSuccess: () => { setDirty(false); onSaved() },
+    onSuccess: () => { setDirty(false); setEditMode(false); onSaved() },
   })
 
   const sendChat = async () => {
@@ -167,30 +224,62 @@ function PatternView({
 
       {/* Right: personal notes + AI chat */}
       <div className="space-y-4">
+        {/* My Notes — edit / rendered view toggle */}
         <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
-            📝 My Notes
-          </h3>
-          <textarea
-            value={notes}
-            onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
-            rows={5}
-            placeholder={`Your personal notes on ${pattern} pattern…`}
-            className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y"
-          />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">📝 My Notes</h3>
+            {!editMode && notes && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+              >
+                ✏ Edit
+              </button>
+            )}
+          </div>
+          {editMode || !notes ? (
+            <textarea
+              value={notes}
+              onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
+              rows={6}
+              placeholder={`Your personal notes on ${pattern} pattern… (supports **bold**, *italic*, \`code\`, lists)`}
+              className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y font-mono"
+            />
+          ) : (
+            <div
+              className="prose prose-sm max-w-none space-y-1 text-gray-700"
+              dangerouslySetInnerHTML={{ __html: renderMd(notes) }}
+            />
+          )}
         </div>
 
+        {/* Memory Techniques — edit / rendered view toggle */}
         <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
-            🧠 Memory Techniques
-          </h3>
-          <textarea
-            value={memo}
-            onChange={(e) => { setMemo(e.target.value); setDirty(true) }}
-            rows={3}
-            placeholder="Mnemonics, stories, or memory tricks…"
-            className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y"
-          />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">🧠 Memory Techniques</h3>
+            {!editMode && memo && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+              >
+                ✏ Edit
+              </button>
+            )}
+          </div>
+          {editMode || !memo ? (
+            <textarea
+              value={memo}
+              onChange={(e) => { setMemo(e.target.value); setDirty(true) }}
+              rows={4}
+              placeholder="Mnemonics, stories, or memory tricks… (supports **bold**, lists)"
+              className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y font-mono"
+            />
+          ) : (
+            <div
+              className="prose prose-sm max-w-none space-y-1 text-gray-700"
+              dangerouslySetInnerHTML={{ __html: renderMd(memo) }}
+            />
+          )}
         </div>
 
         {dirty && (
@@ -209,33 +298,56 @@ function PatternView({
           <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             💬 AI Pattern Coach
           </h3>
-          <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+
+          <div className="space-y-3 h-[480px] overflow-y-auto mb-3 pr-1 scrollbar-thin">
+            {chatHistory.length === 0 && (
+              <p className="text-xs text-gray-400 italic text-center pt-8">
+                Ask anything about the {pattern} pattern — strategy, edge cases, problem variants…
+              </p>
+            )}
             {chatHistory.map((m, i) => (
-              <div
-                key={i}
-                className={`text-xs rounded-lg px-3 py-2 leading-relaxed ${
-                  m.role === 'user'
-                    ? 'bg-rose-100 text-rose-900 ml-8'
-                    : 'bg-gray-50 text-gray-700 mr-8 border-l-2 border-rose-500'
-                }`}
-              >
-                {m.content}
+              <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                {m.role === 'user' ? (
+                  <div className="max-w-[80%] bg-rose-600 text-white text-xs rounded-2xl rounded-tr-sm px-4 py-2.5 leading-relaxed shadow-sm">
+                    {m.content}
+                  </div>
+                ) : (
+                  <div className="max-w-[90%] bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <div
+                      className="space-y-1"
+                      dangerouslySetInnerHTML={{ __html: renderMd(m.content) }}
+                    />
+                  </div>
+                )}
               </div>
             ))}
-            {chatLoading && <p className="text-xs text-gray-400 italic px-3">Thinking…</p>}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                  <span className="flex gap-1 items-center text-gray-400 text-xs">
+                    <span className="animate-bounce delay-0">●</span>
+                    <span className="animate-bounce delay-150">●</span>
+                    <span className="animate-bounce delay-300">●</span>
+                  </span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
-          <div className="flex gap-2">
-            <input
+
+          <div className="flex gap-2 items-end">
+            <textarea
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChat()}
-              placeholder={`Ask about ${pattern}…`}
-              className="flex-1 border border-rose-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-600"
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
+              placeholder={`Ask about ${pattern}… (Shift+Enter for new line)`}
+              rows={2}
+              className="flex-1 border border-rose-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-rose-600 resize-none"
             />
             <button
               onClick={sendChat}
               disabled={chatLoading || !chatInput.trim()}
-              className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 self-end"
               style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
             >
               Send
