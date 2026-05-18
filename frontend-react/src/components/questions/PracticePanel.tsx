@@ -32,6 +32,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const [sessionResult, setSessionResult] = useState<Record<string, any> | null>(null)
 
   const curIdx = navIds.indexOf(q.id)
   const hasPrev = curIdx > 0
@@ -71,7 +72,10 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
         code,
         date: new Date().toISOString().slice(0, 10),
       }),
-    onSuccess: onSessionLogged,
+    onSuccess: (data) => {
+      setSessionResult({ ...data, submittedCorrect: correct, timeTaken: elapsed })
+      onSessionLogged()
+    },
   })
 
   const genDesc = async () => {
@@ -105,7 +109,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
   }
 
   return (
-    <div className="flex flex-col h-full text-cream">
+    <div className="flex flex-col h-full text-cream relative">
       {/* ── Header ── */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-navy-mid flex-wrap">
         <h2 className="flex-1 min-w-0 text-sm font-extrabold text-rose-500 truncate">
@@ -302,6 +306,84 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
           <p className="text-xs text-red-400 mt-1 text-center">Failed to save. Try again.</p>
         )}
       </div>
+
+      {/* ── Session Result Overlay ── */}
+      {sessionResult && (
+        <div className="absolute inset-0 bg-navy-dark/95 backdrop-blur-sm flex flex-col items-center justify-center z-50 px-6 gap-5">
+          {/* Result badge */}
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg ${
+            sessionResult.submittedCorrect ? 'bg-green-500/20 border-2 border-green-400' : 'bg-red-500/20 border-2 border-red-400'
+          }`}>
+            {sessionResult.submittedCorrect ? '✅' : '❌'}
+          </div>
+
+          <div className="text-center">
+            <p className="text-white font-extrabold text-lg">
+              {sessionResult.submittedCorrect ? 'Session Logged!' : 'Keep Practising!'}
+            </p>
+            <p className="text-gray-400 text-xs mt-1 truncate max-w-xs">{q.title}</p>
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+            <ResultStat
+              label="Time Taken"
+              value={`${Math.floor(sessionResult.timeTaken / 60)}m ${sessionResult.timeTaken % 60}s`}
+            />
+            <ResultStat
+              label="Next Revision"
+              value={sessionResult.next_revision
+                ? new Date(sessionResult.next_revision).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                : '—'}
+            />
+            <ResultStat
+              label="Interval"
+              value={`${sessionResult.interval_days ?? 0}d`}
+            />
+            <ResultStat
+              label="Status"
+              value={sessionResult.revision_status ?? '—'}
+              valueColor={
+                sessionResult.revision_status === 'Mastered' ? '#86efac'
+                : sessionResult.revision_status === 'Needs Work' ? '#fca5a5'
+                : '#fcd34d'
+              }
+            />
+            <ResultStat
+              label="Ease Factor"
+              value={(sessionResult.ease_factor ?? 2.5).toFixed(2)}
+            />
+            <ResultStat
+              label="Coverage"
+              value={sessionResult.coverage_status ?? '—'}
+              valueColor="#86efac"
+            />
+          </div>
+
+          <p className="text-[10px] text-gray-500 text-center">
+            AI accuracy analysis running in background…
+          </p>
+
+          {/* Actions */}
+          <div className="flex gap-3 w-full max-w-xs">
+            {hasNext && (
+              <button
+                onClick={() => { setSessionResult(null); onNavigate(1) }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
+              >
+                Next ▶
+              </button>
+            )}
+            <button
+              onClick={() => { setSessionResult(null); onClose() }}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-navy-light text-rose-300 hover:bg-navy-mid border border-navy-mid"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -311,6 +393,17 @@ function StatPill({ label, value, valueStyle }: { label: string; value: string; 
     <div className="bg-navy-light border border-navy-mid rounded-lg px-2.5 py-1 text-center flex-shrink-0">
       <p className="text-[9px] text-rose-600 font-bold uppercase tracking-widest leading-none">{label}</p>
       <p className="text-xs font-bold text-rose-100 leading-tight mt-0.5" style={valueStyle}>{value}</p>
+    </div>
+  )
+}
+
+function ResultStat({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <div className="bg-navy-light border border-navy-mid rounded-xl px-3 py-2.5 text-center">
+      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">{label}</p>
+      <p className="text-sm font-extrabold text-white leading-tight" style={valueColor ? { color: valueColor } : undefined}>
+        {value}
+      </p>
     </div>
   )
 }
