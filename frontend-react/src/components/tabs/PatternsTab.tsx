@@ -5,6 +5,7 @@ import { PatternNote } from '../../types'
 
 const PATTERNS = [
   { id: 'Array', label: '🔢 Array' },
+  { id: 'Binary Search', label: '🔍 Binary Search' },
   { id: 'DP', label: '🧮 DP' },
   { id: 'Graphs', label: '🕸 Graphs' },
   { id: 'Greedy', label: '💰 Greedy' },
@@ -244,6 +245,95 @@ function PatternView({
 
 // ── Pattern reference content ──────────────────────────────────────────────────
 const PATTERN_INFO: Record<string, { strategy: string[]; pitfalls: string[]; templates: { name: string; code: string }[] }> = {
+  'Binary Search': {
+    strategy: [
+      'Precondition: the search space must be SORTED or have a monotonic property (not just arrays — ranges of values work too).',
+      'Define the invariant: answer always lives in [lo, hi]. Shrink the window each iteration without losing the answer.',
+      'Three distinct templates: (1) exact match → while (lo <= hi); (2) leftmost/lower-bound → while (lo < hi), hi = mid; (3) rightmost/upper-bound → while (lo < hi), lo = mid + 1.',
+      'Binary Search on Answer: when you can\'t binary-search the array itself, binary-search the answer space. Define a feasibility predicate check(mid) and find the smallest (or largest) mid where it returns true.',
+      'Predicate mindset: reformulate every problem as "find the boundary between False … False True … True" — binary search finds that boundary in O(log N).',
+      'For 2-D matrices with row/column sort: flatten index (row = mid/cols, col = mid%cols) for O(log(m·n)) search.',
+      'When result is a floating-point value (e.g., sqrt), run a fixed number of iterations (≈ 100) instead of checking lo < hi.',
+    ],
+    pitfalls: [
+      'Infinite loop: if hi = mid and lo never advances past mid when hi = lo + 1. Guarantee progress — at least one side must strictly shrink every iteration.',
+      'Integer overflow: always compute mid = lo + (hi - lo) / 2, never (lo + hi) / 2.',
+      'Wrong template: mixing while (lo <= hi) with lo = mid (instead of mid + 1) causes an infinite loop. Match the template exactly.',
+      'Off-by-one on the search space boundary: initialise lo and hi to cover ALL possible answers, including edge values.',
+      'Applying binary search on unsorted or non-monotonic data — validate the monotonic property first.',
+      'Forgetting to handle the case where the target does not exist (return -1 vs return lo).',
+      'For "binary search on answer": forgetting to check feasibility of the lo/hi boundary values before returning.',
+    ],
+    templates: [
+      {
+        name: 'Classic Exact Search',
+        code: `int lo = 0, hi = n - 1;
+while (lo <= hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (arr[mid] == target) return mid;
+    else if (arr[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+}
+return -1; // not found`,
+      },
+      {
+        name: 'Lower Bound (leftmost index where arr[i] >= target)',
+        code: `int lo = 0, hi = n; // hi = n, not n-1 (answer can be n = "not found")
+while (lo < hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (arr[mid] < target) lo = mid + 1;
+    else hi = mid;           // mid could be the answer — don't skip it
+}
+return lo; // first index where arr[lo] >= target`,
+      },
+      {
+        name: 'Upper Bound (rightmost index where arr[i] <= target)',
+        code: `int lo = 0, hi = n; // returns insertion point after last occurrence
+while (lo < hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (arr[mid] <= target) lo = mid + 1;
+    else hi = mid;
+}
+return lo - 1; // last index where arr[i] <= target`,
+      },
+      {
+        name: 'Binary Search on Answer (minimise largest piece)',
+        code: `// Example: split array into k parts, minimise the largest sum
+boolean feasible(int[] arr, int k, int maxSum) {
+    int parts = 1, cur = 0;
+    for (int x : arr) {
+        if (cur + x > maxSum) { parts++; cur = 0; }
+        cur += x;
+    }
+    return parts <= k;
+}
+
+int lo = max(arr), hi = sum(arr);
+while (lo < hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (feasible(arr, k, mid)) hi = mid;
+    else lo = mid + 1;
+}
+return lo; // minimum possible largest sum`,
+      },
+      {
+        name: 'Search in Rotated Sorted Array',
+        code: `int lo = 0, hi = n - 1;
+while (lo <= hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (arr[mid] == target) return mid;
+    if (arr[lo] <= arr[mid]) {          // left half is sorted
+        if (arr[lo] <= target && target < arr[mid]) hi = mid - 1;
+        else lo = mid + 1;
+    } else {                            // right half is sorted
+        if (arr[mid] < target && target <= arr[hi]) lo = mid + 1;
+        else hi = mid - 1;
+    }
+}
+return -1;`,
+      },
+    ],
+  },
   Array: {
     strategy: [
       'Identify if sorting the array unlocks an O(n log n) solution.',
