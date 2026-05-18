@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPatternNotes, updatePatternNote, patternChat } from '../../api/client'
 import { PatternNote } from '../../types'
@@ -80,9 +80,13 @@ function PatternView({
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
 
-  // Reset when pattern or note data changes
-  // (note: initial state from useState args handles first render;
-  //  key prop on PatternView in parent forces remount on pattern change)
+  // Sync from server once data loads (component mounts before query resolves)
+  useEffect(() => {
+    if (!dirty) {
+      setNotes(note.notes ?? '')
+      setMemo(note.memory_techniques ?? '')
+    }
+  }, [note.notes, note.memory_techniques])
 
   const save = useMutation({
     mutationFn: () => updatePatternNote(pattern, notes, memo),
