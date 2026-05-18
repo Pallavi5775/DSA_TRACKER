@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Question } from '../../types'
 import Badge from '../shared/Badge'
 
@@ -56,22 +56,22 @@ export default function CalendarTab({ questions }: Props) {
     <div className="max-w-2xl">
       {/* Nav */}
       <div className="flex items-center justify-between mb-5">
-        <button onClick={prevMonth} className="w-9 h-9 rounded-xl bg-white border border-rose-200 text-rose-500 font-bold hover:bg-rose-50 transition-colors">
+        <button onClick={prevMonth} className="w-9 h-9 rounded-xl bg-white border border-rose-300 text-rose-600 font-bold hover:bg-rose-100 transition-colors">
           ◀
         </button>
         <h2 className="text-lg font-extrabold text-rose-grad">
           {MONTH_NAMES[month]} {year}
         </h2>
-        <button onClick={nextMonth} className="w-9 h-9 rounded-xl bg-white border border-rose-200 text-rose-500 font-bold hover:bg-rose-50 transition-colors">
+        <button onClick={nextMonth} className="w-9 h-9 rounded-xl bg-white border border-rose-300 text-rose-600 font-bold hover:bg-rose-100 transition-colors">
           ▶
         </button>
       </div>
 
       {/* Calendar grid */}
-      <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm mb-5">
+      <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm mb-5">
         <div className="grid grid-cols-7 gap-1 mb-2">
           {DAY_NAMES.map((d) => (
-            <div key={d} className="text-center text-[10px] font-bold text-rose-300 uppercase tracking-widest py-1">
+            <div key={d} className="text-center text-[10px] font-bold text-rose-400 uppercase tracking-widest py-1">
               {d}
             </div>
           ))}
@@ -92,19 +92,19 @@ export default function CalendarTab({ questions }: Props) {
             let cellClass = 'bg-cream border-transparent text-gray-500'
             if (isToday) cellClass = 'text-white border-transparent'
             else if (isOverdue) cellClass = 'bg-red-50 border-red-200 text-red-700'
-            else if (hasDue) cellClass = 'bg-rose-50 border-rose-200 text-rose-800'
+            else if (hasDue) cellClass = 'bg-rose-100 border-rose-300 text-rose-800'
 
             return (
               <div
                 key={ds}
                 className={`rounded-xl border p-1.5 min-h-[52px] flex flex-col items-center gap-1 ${cellClass}`}
-                style={isToday ? { background: 'linear-gradient(135deg,#c97b6e,#b5615a)' } : undefined}
+                style={isToday ? { background: 'linear-gradient(135deg,#e11d48,#be123c)' } : undefined}
               >
                 <span className="text-xs font-semibold leading-none">{day}</span>
                 {qs.length > 0 && (
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white leading-none"
-                    style={{ background: isOverdue ? '#ef4444' : 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+                    style={{ background: isOverdue ? '#ef4444' : 'linear-gradient(135deg,#e11d48,#be123c)' }}
                   >
                     {qs.length}
                   </span>
@@ -116,11 +116,11 @@ export default function CalendarTab({ questions }: Props) {
       </div>
 
       {/* Revision list */}
-      <h3 className="text-xs font-bold uppercase tracking-widest text-rose-300 mb-3">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-rose-400 mb-3">
         Revisions this month — {monthQs.length} problems
       </h3>
       {monthQs.length === 0 ? (
-        <p className="text-sm text-rose-300">No revisions scheduled this month.</p>
+        <p className="text-sm text-rose-400">No revisions scheduled this month.</p>
       ) : (
         <div className="space-y-2">
           {monthQs.map((q) => {
@@ -129,10 +129,10 @@ export default function CalendarTab({ questions }: Props) {
               <div
                 key={q.id}
                 className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
-                  isOver ? 'bg-red-50 border-red-200' : 'bg-white border-rose-200'
+                  isOver ? 'bg-red-50 border-red-200' : 'bg-white border-rose-300'
                 }`}
               >
-                <span className={`text-xs font-bold min-w-[80px] ${isOver ? 'text-red-600' : 'text-rose-500'}`}>
+                <span className={`text-xs font-bold min-w-[80px] ${isOver ? 'text-red-600' : 'text-rose-600'}`}>
                   📅 {q.next_revision}
                 </span>
                 <span className="flex-1 text-sm font-semibold text-indigo-950 truncate">
@@ -142,7 +142,7 @@ export default function CalendarTab({ questions }: Props) {
                 <Badge label={q.revision_status} variant="revision" />
                 <span
                   className="text-sm font-extrabold"
-                  style={{ color: (q.accuracy ?? 0) >= 80 ? '#16a34a' : (q.accuracy ?? 0) >= 60 ? '#d97706' : '#b5615a' }}
+                  style={{ color: (q.accuracy ?? 0) >= 80 ? '#16a34a' : (q.accuracy ?? 0) >= 60 ? '#d97706' : '#be123c' }}
                 >
                   🎯 {(q.accuracy ?? 0).toFixed(0)}%
                 </span>

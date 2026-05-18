@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Editor from '@monaco-editor/react'
 import { Question, AdminUser } from '../../types'
@@ -27,9 +27,9 @@ export default function AdminTab({ questions, onQuestionsChanged }: Props) {
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               view === v
                 ? 'text-white'
-                : 'bg-white border border-rose-200 text-rose-500 hover:bg-rose-50'
+                : 'bg-white border border-rose-300 text-rose-600 hover:bg-rose-100'
             }`}
-            style={view === v ? { background: 'linear-gradient(135deg,#c97b6e,#b5615a)' } : undefined}
+            style={view === v ? { background: 'linear-gradient(135deg,#e11d48,#be123c)' } : undefined}
           >
             {v === 'questions' ? '📋 Questions' : v === 'users' ? '👥 Users' : '📤 Upload'}
           </button>
@@ -86,7 +86,7 @@ function QuestionManager({ questions, onChanged }: { questions: Question[]; onCh
         <button
           onClick={() => setNewQ(true)}
           className="px-4 py-2 rounded-xl text-sm font-bold text-white"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
         >
           + Add Question
         </button>
@@ -104,10 +104,10 @@ function QuestionManager({ questions, onChanged }: { questions: Question[]; onCh
       {/* Question list */}
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
         {questions.map((q) => (
-          <div key={q.id} className="bg-white border border-rose-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div key={q.id} className="bg-white border border-rose-300 rounded-xl px-4 py-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-indigo-950 truncate">{q.title}</p>
-              <p className="text-xs text-rose-300">{q.pattern}</p>
+              <p className="text-xs text-rose-400">{q.pattern}</p>
             </div>
             {hintQid === q.id ? (
               <div className="flex gap-1">
@@ -115,11 +115,11 @@ function QuestionManager({ questions, onChanged }: { questions: Question[]; onCh
                   value={hint}
                   onChange={(e) => setHint(e.target.value)}
                   placeholder="Hint text…"
-                  className="border border-rose-200 rounded-lg px-2 py-1 text-xs w-40"
+                  className="border border-rose-300 rounded-lg px-2 py-1 text-xs w-40"
                 />
                 <button
                   onClick={() => hintMut.mutate({ id: q.id, hint })}
-                  className="px-2 py-1 rounded-lg text-xs text-white bg-rose-500"
+                  className="px-2 py-1 rounded-lg text-xs text-white bg-rose-600"
                 >Save</button>
                 <button onClick={() => setHintQid(null)} className="px-2 py-1 rounded-lg text-xs text-gray-400">✕</button>
               </div>
@@ -127,11 +127,11 @@ function QuestionManager({ questions, onChanged }: { questions: Question[]; onCh
               <div className="flex gap-1">
                 <button
                   onClick={() => { setEditQ(q); setNewQ(false) }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-500 hover:bg-rose-100"
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-100 text-rose-600 hover:bg-rose-200"
                 >Edit</button>
                 <button
                   onClick={() => { setHintQid(q.id); setHint(q.hint ?? '') }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-500 hover:bg-rose-100"
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-100 text-rose-600 hover:bg-rose-200"
                 >💡 Hint</button>
               </div>
             )}
@@ -164,21 +164,21 @@ function QuestionForm({
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   return (
-    <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm space-y-3">
-      <h3 className="text-sm font-bold text-rose-500">{initial ? 'Edit Question' : 'New Question'}</h3>
+    <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm space-y-3">
+      <h3 className="text-sm font-bold text-rose-600">{initial ? 'Edit Question' : 'New Question'}</h3>
       <input
         value={form.title} onChange={(e) => set('title', e.target.value)}
         placeholder="Question title *"
-        className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+        className="w-full border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600"
       />
       <input
         value={form.pattern} onChange={(e) => set('pattern', e.target.value)}
         placeholder="Pattern (e.g. Array, DP, Graphs)"
-        className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+        className="w-full border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600"
       />
       <select
         value={form.difficulty} onChange={(e) => set('difficulty', e.target.value)}
-        className="border border-rose-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-rose-500"
+        className="border border-rose-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-rose-600"
       >
         {['Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}
       </select>
@@ -186,7 +186,7 @@ function QuestionForm({
         value={form.hint} onChange={(e) => set('hint', e.target.value)}
         placeholder="Hint (optional)"
         rows={2}
-        className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500 resize-y"
+        className="w-full border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y"
       />
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200">
@@ -196,7 +196,7 @@ function QuestionForm({
           onClick={() => onSave(form)}
           disabled={loading || !form.title}
           className="px-4 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
         >
           {loading ? 'Saving…' : 'Save'}
         </button>
@@ -226,7 +226,7 @@ function UserManager() {
     onSuccess: () => { setMsg('User deleted.'); qc.invalidateQueries({ queryKey: ['admin-users'] }) },
   })
 
-  if (isLoading) return <p className="text-sm text-rose-300">Loading users…</p>
+  if (isLoading) return <p className="text-sm text-rose-400">Loading users…</p>
 
   return (
     <div className="space-y-4 max-w-lg">
@@ -235,17 +235,17 @@ function UserManager() {
       )}
 
       {/* Create user */}
-      <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">Add User</h3>
+      <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">Add User</h3>
         <div className="flex gap-2">
           <input
             value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
             placeholder="user@example.com"
-            className="flex-1 border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+            className="flex-1 border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600"
           />
           <select
             value={newRole} onChange={(e) => setNewRole(e.target.value)}
-            className="border border-rose-200 rounded-lg px-3 py-2 text-sm bg-white"
+            className="border border-rose-300 rounded-lg px-3 py-2 text-sm bg-white"
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
@@ -254,7 +254,7 @@ function UserManager() {
             onClick={() => createMut.mutate()}
             disabled={!newEmail || createMut.isPending}
             className="px-4 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+            style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
           >
             Add
           </button>
@@ -264,12 +264,12 @@ function UserManager() {
       {/* User list */}
       <div className="space-y-2">
         {users.map((u) => (
-          <div key={u.id} className="bg-white border border-rose-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div key={u.id} className="bg-white border border-rose-300 rounded-xl px-4 py-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-indigo-950">{u.username}</p>
               <p className="text-xs text-gray-400">{u.email}</p>
             </div>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 capitalize">
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-200 text-rose-600 capitalize">
               {u.role}
             </span>
             {u.oauth_provider && (
@@ -312,19 +312,19 @@ function UploadPanel({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div className="max-w-md space-y-4">
-      <div className="bg-white border border-rose-200 rounded-2xl p-6 shadow-sm text-center">
+      <div className="bg-white border border-rose-300 rounded-2xl p-6 shadow-sm text-center">
         <p className="text-3xl mb-3">📤</p>
         <p className="text-sm text-gray-500 mb-4">
           Upload a Markdown file with questions in the expected format.
         </p>
         <label className="cursor-pointer px-5 py-2.5 rounded-xl text-sm font-bold text-white inline-block"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}>
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}>
           {loading ? 'Uploading…' : 'Choose .md File'}
           <input type="file" accept=".md" onChange={handleFile} className="hidden" disabled={loading} />
         </label>
       </div>
       {msg && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-2 text-sm text-rose-700">{msg}</div>
+        <div className="bg-rose-100 border border-rose-300 rounded-xl px-4 py-2 text-sm text-rose-700">{msg}</div>
       )}
     </div>
   )

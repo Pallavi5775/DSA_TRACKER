@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { Question } from '../../types'
 import QuestionCard from '../questions/QuestionCard'
 
@@ -76,9 +76,9 @@ export default function QuestionsTab({ questions, onPractice, onLastRecord, acti
         ].map((m) => (
           <div
             key={m.label}
-            className="bg-white border border-rose-200 rounded-2xl p-4 shadow-sm"
+            className="bg-white border border-rose-300 rounded-2xl p-4 shadow-sm"
           >
-            <p className="text-[10px] font-bold tracking-widest uppercase text-rose-500 mb-1">
+            <p className="text-[10px] font-bold tracking-widest uppercase text-rose-600 mb-1">
               {m.label}
             </p>
             <p className="text-2xl font-extrabold text-rose-grad">{m.value}</p>
@@ -87,15 +87,15 @@ export default function QuestionsTab({ questions, onPractice, onLastRecord, acti
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-rose-200 rounded-2xl p-4 mb-4 shadow-sm">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-rose-300 mb-3">🔎 Filters</p>
+      <div className="bg-white border border-rose-300 rounded-2xl p-4 mb-4 shadow-sm">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-rose-400 mb-3">🔎 Filters</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           <input
             type="text"
             placeholder="Search questions…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-rose-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-rose-500"
+            className="border border-rose-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-rose-600"
           />
           <Select label="Pattern" value={patFilter} onChange={setPatFilter} options={patterns} />
           <Select
@@ -131,12 +131,12 @@ export default function QuestionsTab({ questions, onPractice, onLastRecord, acti
         </div>
       </div>
 
-      <p className="text-xs font-semibold text-rose-300 mb-3">
+      <p className="text-xs font-semibold text-rose-400 mb-3">
         Showing {filtered.length} of {questions.length} problems
       </p>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-rose-300">No questions match the current filters.</p>
+        <p className="text-sm text-rose-400">No questions match the current filters.</p>
       ) : (
         filtered.map((q) => (
           <QuestionCard
@@ -168,7 +168,7 @@ function Select({
       aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-rose-500"
+      className="border border-rose-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-rose-600"
     >
       {options.map((o) => (
         <option key={o} value={o}>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPatternNotes, updatePatternNote, patternChat } from '../../api/client'
 import { PatternNote } from '../../types'
@@ -45,9 +45,9 @@ export default function PatternsTab() {
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               activePattern === p.id
                 ? 'text-white shadow-md'
-                : 'bg-white border border-rose-200 text-rose-500 hover:bg-rose-50'
+                : 'bg-white border border-rose-300 text-rose-600 hover:bg-rose-100'
             }`}
-            style={activePattern === p.id ? { background: 'linear-gradient(135deg,#c97b6e,#b5615a)' } : undefined}
+            style={activePattern === p.id ? { background: 'linear-gradient(135deg,#e11d48,#be123c)' } : undefined}
           >
             {p.label}
           </button>
@@ -114,28 +114,28 @@ function PatternView({
       <div className="space-y-4">
         {info && (
           <>
-            <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+            <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
                 🧭 Core Strategy
               </h3>
               <ul className="space-y-1.5">
                 {info.strategy.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="text-rose-400 mt-0.5 flex-shrink-0">▸</span>
+                    <span className="text-rose-500 mt-0.5 flex-shrink-0">▸</span>
                     {s}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+            <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
                 ⚠ Common Pitfalls
               </h3>
               <ul className="space-y-1.5">
                 {info.pitfalls.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="text-rose-400 mt-0.5 flex-shrink-0">•</span>
+                    <span className="text-rose-500 mt-0.5 flex-shrink-0">•</span>
                     {s}
                   </li>
                 ))}
@@ -143,13 +143,13 @@ function PatternView({
             </div>
 
             {info.templates && info.templates.length > 0 && (
-              <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+              <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
                   💻 Templates
                 </h3>
                 {info.templates.map((t, i) => (
                   <div key={i} className="mb-3">
-                    <p className="text-xs font-semibold text-rose-400 mb-1">{t.name}</p>
+                    <p className="text-xs font-semibold text-rose-500 mb-1">{t.name}</p>
                     <pre className="bg-gray-900 text-green-300 text-xs p-3 rounded-xl overflow-x-auto font-mono leading-relaxed">
                       {t.code}
                     </pre>
@@ -163,8 +163,8 @@ function PatternView({
 
       {/* Right: personal notes + AI chat */}
       <div className="space-y-4">
-        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             📝 My Notes
           </h3>
           <textarea
@@ -172,12 +172,12 @@ function PatternView({
             onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
             rows={5}
             placeholder={`Your personal notes on ${pattern} pattern…`}
-            className="w-full border border-rose-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-500 resize-y"
+            className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y"
           />
         </div>
 
-        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             🧠 Memory Techniques
           </h3>
           <textarea
@@ -185,7 +185,7 @@ function PatternView({
             onChange={(e) => { setMemo(e.target.value); setDirty(true) }}
             rows={3}
             placeholder="Mnemonics, stories, or memory tricks…"
-            className="w-full border border-rose-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-500 resize-y"
+            className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y"
           />
         </div>
 
@@ -194,15 +194,15 @@ function PatternView({
             onClick={() => save.mutate()}
             disabled={save.isPending}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+            style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
           >
             {save.isPending ? 'Saving…' : '💾 Save Notes'}
           </button>
         )}
 
         {/* AI chat */}
-        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             💬 AI Pattern Coach
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
@@ -211,8 +211,8 @@ function PatternView({
                 key={i}
                 className={`text-xs rounded-lg px-3 py-2 leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-rose-50 text-rose-900 ml-8'
-                    : 'bg-gray-50 text-gray-700 mr-8 border-l-2 border-rose-400'
+                    ? 'bg-rose-100 text-rose-900 ml-8'
+                    : 'bg-gray-50 text-gray-700 mr-8 border-l-2 border-rose-500'
                 }`}
               >
                 {m.content}
@@ -226,13 +226,13 @@ function PatternView({
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChat()}
               placeholder={`Ask about ${pattern}…`}
-              className="flex-1 border border-rose-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-500"
+              className="flex-1 border border-rose-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-600"
             />
             <button
               onClick={sendChat}
               disabled={chatLoading || !chatInput.trim()}
               className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+              style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
             >
               Send
             </button>

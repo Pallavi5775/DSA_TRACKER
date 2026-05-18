@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import Editor from '@monaco-editor/react'
 import { Question } from '../../types'
@@ -108,7 +108,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
     <div className="flex flex-col h-full text-cream">
       {/* ── Header ── */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-navy-mid flex-wrap">
-        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-rose-400 truncate">
+        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-rose-500 truncate">
           📝 {q.title}
         </h2>
         {navIds.length > 1 && (
@@ -130,14 +130,14 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
           <button
             disabled={!hasPrev}
             onClick={() => onNavigate(-1)}
-            className="text-xs font-semibold text-rose-400 disabled:text-gray-600 hover:text-rose-300 transition-colors"
+            className="text-xs font-semibold text-rose-500 disabled:text-gray-600 hover:text-rose-400 transition-colors"
           >
             ◀ Prev
           </button>
           <button
             disabled={!hasNext}
             onClick={() => onNavigate(1)}
-            className="text-xs font-semibold text-rose-400 disabled:text-gray-600 hover:text-rose-300 transition-colors"
+            className="text-xs font-semibold text-rose-500 disabled:text-gray-600 hover:text-rose-400 transition-colors"
           >
             Next ▶
           </button>
@@ -147,14 +147,14 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-4">
         {/* AI suggestions */}
         {q.suggestions && (
-          <div className="bg-gradient-to-br from-navy-mid to-navy-light border-l-4 border-rose-400 rounded-r-xl p-3">
-            <p className="text-[10px] font-bold tracking-widest uppercase text-rose-400 mb-1">💡 AI Analysis</p>
-            <p className="text-xs text-rose-100 leading-relaxed whitespace-pre-line">{q.suggestions}</p>
+          <div className="bg-gradient-to-br from-navy-mid to-navy-light border-l-4 border-rose-500 rounded-r-xl p-3">
+            <p className="text-[10px] font-bold tracking-widest uppercase text-rose-500 mb-1">💡 AI Analysis</p>
+            <p className="text-xs text-rose-200 leading-relaxed whitespace-pre-line">{q.suggestions}</p>
           </div>
         )}
         {q.my_gap_analysis && (
-          <div className="bg-navy-light border-l-4 border-rose-500 rounded-r-xl p-3">
-            <p className="text-xs text-rose-50 leading-relaxed">🔍 {q.my_gap_analysis}</p>
+          <div className="bg-navy-light border-l-4 border-rose-600 rounded-r-xl p-3">
+            <p className="text-xs text-rose-100 leading-relaxed">🔍 {q.my_gap_analysis}</p>
           </div>
         )}
 
@@ -169,7 +169,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
                 onClick={genDesc}
                 disabled={genLoading}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+                style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
               >
                 {genLoading ? '⏳ Generating…' : '✨ Generate Description'}
               </button>
@@ -180,7 +180,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
         {/* Hint */}
         {q.hint && (
           <Collapsible title="💡 Hint" open={showHint} onToggle={() => setShowHint((v) => !v)}>
-            <p className="text-xs text-rose-100 leading-relaxed whitespace-pre-line">{q.hint}</p>
+            <p className="text-xs text-rose-200 leading-relaxed whitespace-pre-line">{q.hint}</p>
           </Collapsible>
         )}
 
@@ -190,8 +190,8 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
             {chatHistory.map((m, i) => (
               <div key={i} className={`text-xs rounded-lg px-3 py-2 leading-relaxed ${
                 m.role === 'user'
-                  ? 'bg-navy-mid text-rose-100 ml-6'
-                  : 'bg-navy-light text-rose-200 mr-6 border-l-2 border-rose-500'
+                  ? 'bg-navy-mid text-rose-200 ml-6'
+                  : 'bg-navy-light text-rose-300 mr-6 border-l-2 border-rose-600'
               }`}>
                 {m.content}
               </div>
@@ -207,13 +207,13 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChat()}
               placeholder="Ask for a hint…"
-              className="flex-1 bg-navy-mid border border-navy-mid focus:border-rose-500 rounded-lg px-3 py-1.5 text-xs text-cream focus:outline-none"
+              className="flex-1 bg-navy-mid border border-navy-mid focus:border-rose-600 rounded-lg px-3 py-1.5 text-xs text-cream focus:outline-none"
             />
             <button
               onClick={sendChat}
               disabled={chatLoading || !chatInput.trim()}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+              style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
             >
               Send
             </button>
@@ -222,7 +222,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
 
         {/* Logic */}
         <div>
-          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-400 block mb-1">
+          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-500 block mb-1">
             ✍ Logic / Approach
           </label>
           <textarea
@@ -230,13 +230,13 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
             onChange={(e) => setLogic(e.target.value)}
             rows={4}
             placeholder="Describe your approach, intuition, and key observations…"
-            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
+            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-600 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
           />
         </div>
 
         {/* Code editor */}
         <div>
-          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-400 block mb-1">
+          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-500 block mb-1">
             💻 Code
           </label>
           <div className="rounded-xl overflow-hidden border border-navy-mid">
@@ -260,7 +260,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
 
         {/* Correct / Wrong */}
         <div>
-          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-400 block mb-2">
+          <label className="text-[10px] font-bold tracking-widest uppercase text-rose-500 block mb-2">
             Self-Assessment
           </label>
           <div className="flex gap-2">
@@ -294,7 +294,7 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
           onClick={() => submit.mutate()}
           disabled={submit.isPending}
           className="w-full py-3 rounded-xl text-sm font-extrabold text-white disabled:opacity-60 transition-opacity"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
         >
           {submit.isPending ? '⏳ Saving…' : '🎯 Submit Session'}
         </button>
@@ -309,8 +309,8 @@ export default function PracticePanel({ question: q, navIds, onNavigate, onClose
 function StatPill({ label, value, valueStyle }: { label: string; value: string; valueStyle?: React.CSSProperties }) {
   return (
     <div className="bg-navy-light border border-navy-mid rounded-lg px-2.5 py-1 text-center flex-shrink-0">
-      <p className="text-[9px] text-rose-500 font-bold uppercase tracking-widest leading-none">{label}</p>
-      <p className="text-xs font-bold text-rose-50 leading-tight mt-0.5" style={valueStyle}>{value}</p>
+      <p className="text-[9px] text-rose-600 font-bold uppercase tracking-widest leading-none">{label}</p>
+      <p className="text-xs font-bold text-rose-100 leading-tight mt-0.5" style={valueStyle}>{value}</p>
     </div>
   )
 }
@@ -332,8 +332,8 @@ function Collapsible({
         onClick={onToggle}
         className="w-full flex items-center justify-between px-3 py-2.5 bg-navy-light hover:bg-navy-mid transition-colors text-left"
       >
-        <span className="text-xs font-semibold text-rose-300">{title}</span>
-        <span className="text-rose-400 text-xs">{open ? '▲' : '▼'}</span>
+        <span className="text-xs font-semibold text-rose-400">{title}</span>
+        <span className="text-rose-500 text-xs">{open ? '▲' : '▼'}</span>
       </button>
       {open && <div className="px-3 py-3 bg-navy-dark text-xs">{children}</div>}
     </div>
@@ -348,7 +348,7 @@ function DescriptionRenderer({ text }: { text: string }) {
         const s = line.trim()
         if (['PROBLEM', 'EXAMPLE 1', 'EXAMPLE 2', 'CONSTRAINTS'].includes(s)) {
           return (
-            <p key={i} className="text-[10px] font-bold tracking-widest uppercase text-rose-500 pt-2 pb-0.5">
+            <p key={i} className="text-[10px] font-bold tracking-widest uppercase text-rose-600 pt-2 pb-0.5">
               {s}
             </p>
           )
@@ -357,8 +357,8 @@ function DescriptionRenderer({ text }: { text: string }) {
           const [lbl, ...rest] = s.split(':')
           return (
             <p key={i} className="text-xs leading-relaxed">
-              <strong className="text-rose-300">{lbl}:</strong>{' '}
-              <code className="bg-navy-mid text-rose-100 px-1.5 py-0.5 rounded text-[11px]">
+              <strong className="text-rose-400">{lbl}:</strong>{' '}
+              <code className="bg-navy-mid text-rose-200 px-1.5 py-0.5 rounded text-[11px]">
                 {rest.join(':').trim()}
               </code>
             </p>
@@ -368,7 +368,7 @@ function DescriptionRenderer({ text }: { text: string }) {
           return <p key={i} className="text-xs text-gray-300 leading-relaxed pl-1">{s}</p>
         }
         if (s) {
-          return <p key={i} className="text-xs text-rose-50 leading-relaxed">{s}</p>
+          return <p key={i} className="text-xs text-rose-100 leading-relaxed">{s}</p>
         }
         return <div key={i} className="h-1" />
       })}

@@ -1,4 +1,4 @@
-interface HeatmapProps {
+﻿interface HeatmapProps {
   sessionsByDate: Record<string, number>
   weeks?: number
 }
@@ -7,7 +7,7 @@ function cellColor(n: number): string {
   if (n === 0) return '#fdf0ec'
   if (n === 1) return '#f5d5c8'
   if (n === 2) return '#d4a898'
-  if (n === 3) return '#c97b6e'
+  if (n === 3) return '#e11d48'
   return '#7a3f38'
 }
 
@@ -50,15 +50,15 @@ export default function Heatmap({ sessionsByDate, weeks = 16 }: HeatmapProps) {
   }
 
   return (
-    <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-      <p className="text-xs font-bold tracking-widest uppercase text-rose-500 mb-3">
+    <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+      <p className="text-xs font-bold tracking-widest uppercase text-rose-600 mb-3">
         Activity Heatmap — last {weeks} weeks
       </p>
       <div className="flex items-start gap-1">
         {/* Day labels */}
         <div className="flex flex-col gap-0.5 mr-1 mt-3.5">
           {dayLabels.map((l, i) => (
-            <div key={i} className="h-3 text-right text-rose-300 text-[9px] leading-3 pr-1">
+            <div key={i} className="h-3 text-right text-rose-400 text-[9px] leading-3 pr-1">
               {l}
             </div>
           ))}
@@ -71,7 +71,7 @@ export default function Heatmap({ sessionsByDate, weeks = 16 }: HeatmapProps) {
             {monthMarkers.map((m) => (
               <span
                 key={m.colIdx}
-                className="absolute text-[9px] font-bold text-rose-500"
+                className="absolute text-[9px] font-bold text-rose-600"
                 style={{ left: m.colIdx * 14 }}
               >
                 {m.month}
@@ -88,7 +88,7 @@ export default function Heatmap({ sessionsByDate, weeks = 16 }: HeatmapProps) {
                     className="w-3 h-3 rounded-sm"
                     style={{
                       background: cellColor(cell.n),
-                      border: cell.isToday ? '1.5px solid #c97b6e' : '1.5px solid transparent',
+                      border: cell.isToday ? '1.5px solid #e11d48' : '1.5px solid transparent',
                     }}
                   />
                 ))}
@@ -100,7 +100,7 @@ export default function Heatmap({ sessionsByDate, weeks = 16 }: HeatmapProps) {
 
       {/* Legend */}
       <div className="flex items-center gap-1 mt-3">
-        <span className="text-[10px] text-rose-300">Less</span>
+        <span className="text-[10px] text-rose-400">Less</span>
         {[0, 1, 2, 3, 4].map((n) => (
           <div
             key={n}
@@ -108,7 +108,7 @@ export default function Heatmap({ sessionsByDate, weeks = 16 }: HeatmapProps) {
             style={{ background: cellColor(n) }}
           />
         ))}
-        <span className="text-[10px] text-rose-300">More</span>
+        <span className="text-[10px] text-rose-400">More</span>
       </div>
     </div>
   )

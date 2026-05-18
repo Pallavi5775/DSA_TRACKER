@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import Editor from '@monaco-editor/react'
 import { Question, LastLog } from '../../types'
@@ -46,7 +46,7 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
     <div className="flex flex-col h-full text-cream">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-navy-mid flex-wrap">
-        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-rose-400 truncate">
+        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-rose-500 truncate">
           📖 {q.title}
         </h2>
         {navIds.length > 1 && (
@@ -60,12 +60,12 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
           <button
             disabled={!hasPrev}
             onClick={() => onNavigate(-1)}
-            className="text-xs font-semibold text-rose-400 disabled:text-gray-600"
+            className="text-xs font-semibold text-rose-500 disabled:text-gray-600"
           >◀ Prev</button>
           <button
             disabled={!hasNext}
             onClick={() => onNavigate(1)}
-            className="text-xs font-semibold text-rose-400 disabled:text-gray-600"
+            className="text-xs font-semibold text-rose-500 disabled:text-gray-600"
           >Next ▶</button>
         </div>
       )}
@@ -74,20 +74,20 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-navy-light border border-navy-mid rounded-xl p-2.5 text-center">
-            <p className="text-[9px] text-rose-500 font-bold uppercase tracking-widest">Accuracy</p>
+            <p className="text-[9px] text-rose-600 font-bold uppercase tracking-widest">Accuracy</p>
             <p className="text-lg font-extrabold mt-0.5" style={{ color: accColor }}>
               {acc.toFixed(0)}%
             </p>
           </div>
           <div className="bg-navy-light border border-navy-mid rounded-xl p-2.5 text-center">
-            <p className="text-[9px] text-rose-500 font-bold uppercase tracking-widest">Next Rev</p>
-            <p className="text-sm font-bold text-rose-50 mt-0.5">
+            <p className="text-[9px] text-rose-600 font-bold uppercase tracking-widest">Next Rev</p>
+            <p className="text-sm font-bold text-rose-100 mt-0.5">
               {q.next_revision && q.next_revision !== '9999-12-31' ? q.next_revision : '—'}
             </p>
           </div>
           <div className="bg-navy-light border border-navy-mid rounded-xl p-2.5 text-center">
-            <p className="text-[9px] text-rose-500 font-bold uppercase tracking-widest">EF</p>
-            <p className="text-sm font-bold text-rose-50 mt-0.5">{(q.ease_factor ?? 2.5).toFixed(2)}</p>
+            <p className="text-[9px] text-rose-600 font-bold uppercase tracking-widest">EF</p>
+            <p className="text-sm font-bold text-rose-100 mt-0.5">{(q.ease_factor ?? 2.5).toFixed(2)}</p>
           </div>
         </div>
 
@@ -109,8 +109,8 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
             {/* Logic */}
             {lastLog.logic && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">Logic / Approach</p>
-                <div className="bg-navy-light border border-navy-mid rounded-xl p-3 text-xs text-rose-100 leading-relaxed whitespace-pre-line">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">Logic / Approach</p>
+                <div className="bg-navy-light border border-navy-mid rounded-xl p-3 text-xs text-rose-200 leading-relaxed whitespace-pre-line">
                   {lastLog.logic}
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
             {/* Code */}
             {lastLog.code && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">Code</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">Code</p>
                 <div className="rounded-xl overflow-hidden border border-navy-mid">
                   <Editor
                     height="220px"
@@ -136,7 +136,7 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
 
         {/* Editable notes */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest text-rose-400 block mb-1">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-rose-500 block mb-1">
             📝 Notes
           </label>
           <textarea
@@ -144,12 +144,12 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
             onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
             rows={3}
             placeholder="Your personal notes for this question…"
-            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
+            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-600 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest text-rose-400 block mb-1">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-rose-500 block mb-1">
             🔍 My Gap Analysis
           </label>
           <textarea
@@ -157,7 +157,7 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
             onChange={(e) => { setMyGap(e.target.value); setDirty(true) }}
             rows={3}
             placeholder="What did you miss? What to remember next time?"
-            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
+            className="w-full bg-navy-mid border border-navy-mid focus:border-rose-600 rounded-xl px-3 py-2 text-xs text-cream focus:outline-none resize-y leading-relaxed placeholder:text-gray-500"
           />
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function LastRecordPanel({ question: q, navIds, onNavigate, onClo
             onClick={() => save.mutate()}
             disabled={save.isPending}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+            style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
           >
             {save.isPending ? 'Saving…' : '💾 Save Notes'}
           </button>

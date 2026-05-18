@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Editor from '@monaco-editor/react'
 import { githubHistory } from '../../api/client'
@@ -17,11 +17,11 @@ export default function JournalTab() {
 
   const [expanded, setExpanded] = useState<number | null>(null)
 
-  if (isLoading) return <p className="text-sm text-rose-300">Loading journal…</p>
+  if (isLoading) return <p className="text-sm text-rose-400">Loading journal…</p>
 
   if (!data?.connected) {
     return (
-      <div className="bg-white border border-rose-200 rounded-2xl p-8 text-center max-w-md">
+      <div className="bg-white border border-rose-300 rounded-2xl p-8 text-center max-w-md">
         <p className="text-3xl mb-3">📖</p>
         <p className="text-gray-500 text-sm">
           Your GitHub repository is not connected. Sign in with GitHub to automatically backup and view your practice journal.
@@ -34,7 +34,7 @@ export default function JournalTab() {
 
   if (sessions.length === 0) {
     return (
-      <p className="text-sm text-rose-300">
+      <p className="text-sm text-rose-400">
         No sessions in your journal yet. Complete a practice session to start building your history.
       </p>
     )
@@ -48,7 +48,7 @@ export default function JournalTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h2 className="text-xs font-bold uppercase tracking-widest text-rose-500">
+      <h2 className="text-xs font-bold uppercase tracking-widest text-rose-600">
         📖 Practice Journal — {sessions.length} sessions
       </h2>
 
@@ -56,7 +56,7 @@ export default function JournalTab() {
         .sort(([a], [b]) => b.localeCompare(a))
         .map(([day, daySessions]) => (
           <div key={day}>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-300 mb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">
               {new Date(day + 'T00:00:00').toLocaleDateString('en', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
               })}
@@ -68,11 +68,11 @@ export default function JournalTab() {
                 return (
                   <div
                     key={i}
-                    className="bg-white border border-rose-200 rounded-2xl overflow-hidden shadow-sm"
+                    className="bg-white border border-rose-300 rounded-2xl overflow-hidden shadow-sm"
                   >
                     {/* Summary row */}
                     <button
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-50 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-100 transition-colors text-left"
                       onClick={() => setExpanded(isOpen ? null : idx)}
                     >
                       <span
@@ -90,23 +90,23 @@ export default function JournalTab() {
                           <span>· ⏱ {Math.max(1, Math.floor((s.time_taken_seconds ?? 0) / 60))}m</span>
                         </div>
                       </div>
-                      <span className="text-rose-300 text-xs flex-shrink-0">{isOpen ? '▲' : '▼'}</span>
+                      <span className="text-rose-400 text-xs flex-shrink-0">{isOpen ? '▲' : '▼'}</span>
                     </button>
 
                     {/* Expanded detail */}
                     {isOpen && (
-                      <div className="px-4 pb-4 pt-1 border-t border-rose-100 space-y-3">
+                      <div className="px-4 pb-4 pt-1 border-t border-rose-200 space-y-3">
                         {s.logic && (
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">Logic</p>
-                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line bg-rose-50 rounded-xl p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">Logic</p>
+                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line bg-rose-100 rounded-xl p-3">
                               {s.logic}
                             </p>
                           </div>
                         )}
                         {s.code && (
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">Code</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">Code</p>
                             <div className="rounded-xl overflow-hidden border border-gray-200">
                               <Editor
                                 height="200px"
@@ -120,15 +120,15 @@ export default function JournalTab() {
                         )}
                         {s.gap_analysis && (
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">AI Gap Analysis</p>
-                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line bg-rose-50 rounded-xl p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">AI Gap Analysis</p>
+                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line bg-rose-100 rounded-xl p-3">
                               {s.gap_analysis}
                             </p>
                           </div>
                         )}
                         {s.ai_insight && (
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">AI Insight</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">AI Insight</p>
                             <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line bg-yellow-50 rounded-xl p-3 border border-yellow-200">
                               {s.ai_insight}
                             </p>

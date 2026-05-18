@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import LoginPage from './components/auth/LoginPage'
 import AppLayout from './components/layout/AppLayout'
@@ -70,7 +70,7 @@ function AppInner() {
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-3">🎯</div>
-          <div className="text-rose-500 font-semibold text-lg">Loading…</div>
+          <div className="text-rose-600 font-semibold text-lg">Loading…</div>
         </div>
       </div>
     )

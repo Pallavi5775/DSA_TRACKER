@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AuthData, NotifSettings } from '../../types'
 import { getPracticeDays, updatePracticeDays, getNotifSettings, updateNotifSettings, githubSetup } from '../../api/client'
@@ -79,8 +79,8 @@ export default function SettingsTab({ auth }: Props) {
       )}
 
       {/* Practice Schedule */}
-      <section className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-4">
+      <section className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-4">
           📅 Practice Schedule
         </h2>
         <p className="text-sm text-gray-500 mb-3">
@@ -94,9 +94,9 @@ export default function SettingsTab({ auth }: Props) {
               className={`px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
                 selectedDays.has(i)
                   ? 'text-white'
-                  : 'bg-rose-50 text-rose-500 hover:bg-rose-100'
+                  : 'bg-rose-100 text-rose-600 hover:bg-rose-200'
               }`}
-              style={selectedDays.has(i) ? { background: 'linear-gradient(135deg,#c97b6e,#b5615a)' } : undefined}
+              style={selectedDays.has(i) ? { background: 'linear-gradient(135deg,#e11d48,#be123c)' } : undefined}
             >
               {label}
             </button>
@@ -111,15 +111,15 @@ export default function SettingsTab({ auth }: Props) {
           onClick={() => savePracticeDays.mutate()}
           disabled={savePracticeDays.isPending}
           className="px-4 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
         >
           {savePracticeDays.isPending ? 'Saving…' : 'Save Schedule'}
         </button>
       </section>
 
       {/* Notifications */}
-      <section className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-4">
+      <section className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-4">
           🔔 Notification Settings
         </h2>
 
@@ -129,7 +129,7 @@ export default function SettingsTab({ auth }: Props) {
               type="checkbox"
               checked={notifSettings.email_notif_enabled}
               onChange={(e) => setNotifSettings((s) => ({ ...s, email_notif_enabled: e.target.checked }))}
-              className="w-4 h-4 accent-rose-500"
+              className="w-4 h-4 accent-rose-600"
             />
             <span className="text-sm text-gray-700">Email notifications</span>
           </label>
@@ -139,7 +139,7 @@ export default function SettingsTab({ auth }: Props) {
               type="checkbox"
               checked={notifSettings.telegram_notif_enabled}
               onChange={(e) => setNotifSettings((s) => ({ ...s, telegram_notif_enabled: e.target.checked }))}
-              className="w-4 h-4 accent-rose-500"
+              className="w-4 h-4 accent-rose-600"
             />
             <span className="text-sm text-gray-700">Telegram notifications</span>
           </label>
@@ -152,7 +152,7 @@ export default function SettingsTab({ auth }: Props) {
                 value={notifSettings.telegram_chat_id ?? ''}
                 onChange={(e) => setNotifSettings((s) => ({ ...s, telegram_chat_id: e.target.value }))}
                 placeholder="e.g. 123456789"
-                className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+                className="w-full border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600"
               />
             </div>
           )}
@@ -167,7 +167,7 @@ export default function SettingsTab({ auth }: Props) {
               max={23}
               value={notifSettings.notify_hour}
               onChange={(e) => setNotifSettings((s) => ({ ...s, notify_hour: Number(e.target.value) }))}
-              className="w-24 border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+              className="w-24 border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-600"
             />
           </div>
         </div>
@@ -176,15 +176,15 @@ export default function SettingsTab({ auth }: Props) {
           onClick={() => saveNotifSettings.mutate()}
           disabled={saveNotifSettings.isPending}
           className="mt-4 px-4 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+          style={{ background: 'linear-gradient(135deg,#e11d48,#be123c)' }}
         >
           {saveNotifSettings.isPending ? 'Saving…' : 'Save Notification Settings'}
         </button>
       </section>
 
       {/* GitHub Integration */}
-      <section className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+      <section className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
           GitHub Integration
         </h2>
         {auth.oauthProvider === 'github' ? (
@@ -208,8 +208,8 @@ export default function SettingsTab({ auth }: Props) {
       </section>
 
       {/* Account info */}
-      <section className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+      <section className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
           👤 Account
         </h2>
         <div className="space-y-1 text-sm">

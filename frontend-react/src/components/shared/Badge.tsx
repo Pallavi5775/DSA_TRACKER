@@ -1,4 +1,4 @@
-interface BadgeProps {
+﻿interface BadgeProps {
   label: string
   variant?: 'pattern' | 'coverage' | 'revision' | 'due' | 'custom'
   bg?: string
@@ -19,14 +19,14 @@ export default function Badge({ label, variant = 'custom', bg, color, className 
     const map: Record<string, [string, string]> = {
       Mastered: ['#f0ddd8', '#8b4a42'],
       'Needs Work': ['#fff1f2', '#be123c'],
-      Pending: ['#fdf5f2', '#c97b6e'],
+      Pending: ['#fdf5f2', '#e11d48'],
     }
-    const [b, c] = map[label] ?? ['#fdf5f2', '#c97b6e']
+    const [b, c] = map[label] ?? ['#fdf5f2', '#e11d48']
     style = { background: b, color: c }
   } else if (variant === 'due') {
     style = { background: '#ffe4e6', color: '#be123c' }
   } else {
-    style = { background: bg ?? '#fdf5f2', color: color ?? '#c97b6e' }
+    style = { background: bg ?? '#fdf5f2', color: color ?? '#e11d48' }
   }
 
   return (

@@ -1,4 +1,4 @@
-const BACKEND = (import.meta as any).env?.VITE_BACKEND_URL ?? 'https://dsa-planner.co.in'
+﻿const BACKEND = (import.meta as any).env?.VITE_BACKEND_URL ?? 'https://dsa-planner.co.in'
 
 export default function LoginPage() {
   const params = new URLSearchParams(window.location.search)
@@ -11,7 +11,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🎯</div>
           <h1 className="text-2xl font-extrabold text-rose-grad mb-1">DSA Revision Planner</h1>
-          <p className="text-rose-300 text-sm">Track · Practice · Master</p>
+          <p className="text-rose-400 text-sm">Track · Practice · Master</p>
         </div>
 
         {authError && (
@@ -21,7 +21,7 @@ export default function LoginPage() {
         )}
 
         {/* Card */}
-        <div className="bg-white border border-rose-200 rounded-2xl p-8 shadow-sm">
+        <div className="bg-white border border-rose-300 rounded-2xl p-8 shadow-sm">
           <p className="text-center text-gray-500 text-sm mb-6">Sign in to continue</p>
 
           {/* Google */}
@@ -42,7 +42,7 @@ export default function LoginPage() {
             Continue with GitHub
           </a>
 
-          <p className="text-center text-rose-300 text-xs mt-5">
+          <p className="text-center text-rose-400 text-xs mt-5">
             We only read your public profile and email address.
           </p>
         </div>

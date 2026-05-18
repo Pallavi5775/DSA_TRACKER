@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AuthData, ActivePanel, Question } from '../../types'
 import { getQuestions } from '../../api/client'
@@ -67,12 +67,12 @@ export default function AppLayout({ auth, onLogout }: Props) {
   return (
     <div className="min-h-screen bg-cream flex flex-col">
       {/* ── Top bar ── */}
-      <header className="bg-white border-b border-rose-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+      <header className="bg-white border-b border-rose-300 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div>
           <h1 className="font-extrabold text-xl tracking-tight text-rose-grad leading-none">
             🎯 DSA Revision Planner
           </h1>
-          <p className="text-rose-300 text-xs font-medium">Track · Practice · Master</p>
+          <p className="text-rose-400 text-xs font-medium">Track · Practice · Master</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -82,16 +82,16 @@ export default function AppLayout({ auth, onLogout }: Props) {
               <img
                 src={auth.avatarUrl}
                 alt={auth.username}
-                className="w-7 h-7 rounded-full border border-rose-200"
+                className="w-7 h-7 rounded-full border border-rose-300"
               />
             )}
             <span
               className="px-3 py-1 rounded-full text-xs font-bold text-white"
-              style={{ background: isAdmin ? 'linear-gradient(135deg,#c97b6e,#b5615a)' : 'linear-gradient(135deg,#c97b6e,#8b5cf6)' }}
+              style={{ background: isAdmin ? 'linear-gradient(135deg,#e11d48,#be123c)' : 'linear-gradient(135deg,#e11d48,#8b5cf6)' }}
             >
               {isAdmin ? '👑' : '👤'} {auth.username}
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-500 uppercase tracking-wide">
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-200 text-rose-600 uppercase tracking-wide">
               {auth.role}
             </span>
           </div>
@@ -105,14 +105,14 @@ export default function AppLayout({ auth, onLogout }: Props) {
       </header>
 
       {/* ── Tab navigation ── */}
-      <nav className="bg-white border-b border-rose-200 px-6 flex gap-0 overflow-x-auto">
+      <nav className="bg-white border-b border-rose-300 px-6 flex gap-0 overflow-x-auto">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
               activeTab === t.id
-                ? 'border-rose-500 text-rose-500'
+                ? 'border-rose-600 text-rose-600'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -145,7 +145,7 @@ export default function AppLayout({ auth, onLogout }: Props) {
 
         {/* Right: practice / last-record panel */}
         {showSidePanel && activeQ && (
-          <aside className="w-[480px] flex-shrink-0 border-l border-rose-200 bg-navy overflow-y-auto scrollbar-thin">
+          <aside className="w-[480px] flex-shrink-0 border-l border-rose-300 bg-navy overflow-y-auto scrollbar-thin">
             {panel.mode === 'practice' ? (
               <PracticePanel
                 question={activeQ}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -8,7 +8,7 @@ import { ActivityData } from '../../types'
 import Heatmap from '../shared/Heatmap'
 
 const ROSE_PALETTE = [
-  '#c97b6e','#d4a898','#e8c4b8','#f0ddd8','#b5615a',
+  '#e11d48','#d4a898','#e8c4b8','#f0ddd8','#be123c',
   '#8b4a42','#7a3f38','#f5d5c8','#e8a898','#fde8e3',
 ]
 
@@ -19,7 +19,7 @@ export default function ActivityTab() {
   })
 
   if (isLoading || !act) {
-    return <p className="text-sm text-rose-300">Loading activity…</p>
+    return <p className="text-sm text-rose-400">Loading activity…</p>
   }
 
   const totalMins = Math.round((act.total_time_seconds ?? 0) / 60)
@@ -58,9 +58,9 @@ export default function ActivityTab() {
           { icon: '📈', label: 'Avg Accuracy', value: `${(act.avg_accuracy ?? 0).toFixed(0)}%`, sub: '' },
           { icon: '⏱', label: 'Total Time', value: `${totalMins}m`, sub: '' },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-rose-200 rounded-2xl p-4 shadow-sm text-center">
+          <div key={s.label} className="bg-white border border-rose-300 rounded-2xl p-4 shadow-sm text-center">
             <div className="text-2xl mb-1">{s.icon}</div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mb-1">{s.label}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600 mb-1">{s.label}</p>
             <p className="text-2xl font-extrabold text-rose-grad">{s.value}</p>
           </div>
         ))}
@@ -72,8 +72,8 @@ export default function ActivityTab() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Accuracy trend */}
-        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             Accuracy Trend — correct vs wrong
           </p>
           {accuracyData.length > 0 ? (
@@ -85,17 +85,17 @@ export default function ActivityTab() {
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="correct" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} name="Correct" />
-                <Line type="monotone" dataKey="wrong" stroke="#b5615a" strokeWidth={2} dot={{ r: 3 }} name="Wrong" />
+                <Line type="monotone" dataKey="wrong" stroke="#be123c" strokeWidth={2} dot={{ r: 3 }} name="Wrong" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-rose-300">No data yet.</p>
+            <p className="text-sm text-rose-400">No data yet.</p>
           )}
         </div>
 
         {/* Pattern distribution */}
-        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
             Practice by Pattern (top 10)
           </p>
           {topPatterns.length > 0 ? (
@@ -117,14 +117,14 @@ export default function ActivityTab() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-rose-300">No data yet.</p>
+            <p className="text-sm text-rose-400">No data yet.</p>
           )}
         </div>
       </div>
 
       {/* Charts row 2 */}
-      <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">
+      <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">
           Time Spent per Pattern (minutes, top 10)
         </p>
         {topTimes.length > 0 ? (
@@ -134,19 +134,19 @@ export default function ActivityTab() {
               <XAxis type="number" tick={{ fontSize: 10 }} unit="m" />
               <YAxis dataKey="pattern" type="category" tick={{ fontSize: 10 }} width={110} />
               <Tooltip formatter={(v) => [`${v}m`]} />
-              <Bar dataKey="minutes" fill="#c97b6e" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10 }} />
+              <Bar dataKey="minutes" fill="#e11d48" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10 }} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-sm text-rose-300">No data yet.</p>
+          <p className="text-sm text-rose-400">No data yet.</p>
         )}
       </div>
 
       {/* Recent sessions feed */}
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">📋 Recent Sessions</h3>
+        <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-3">📋 Recent Sessions</h3>
         {recent.length === 0 ? (
-          <p className="text-sm text-rose-300">No sessions yet — start practicing!</p>
+          <p className="text-sm text-rose-400">No sessions yet — start practicing!</p>
         ) : (
           <div className="max-w-xl space-y-4">
             {Object.entries(grouped)
@@ -154,13 +154,13 @@ export default function ActivityTab() {
               .slice(0, 7)
               .map(([day, sessions]: [string, typeof recent]) => (
                 <div key={day}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-300 mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-2">
                     {new Date(day + 'T00:00:00').toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </p>
                   {sessions.map((s, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-3 bg-white border border-rose-200 rounded-xl px-4 py-2.5 mb-1.5 shadow-sm"
+                      className="flex items-center gap-3 bg-white border border-rose-300 rounded-xl px-4 py-2.5 mb-1.5 shadow-sm"
                     >
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-bold ${
@@ -171,7 +171,7 @@ export default function ActivityTab() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-indigo-950 truncate">{s.question_title}</p>
-                        <p className="text-xs text-rose-300">{s.pattern}</p>
+                        <p className="text-xs text-rose-400">{s.pattern}</p>
                       </div>
                       <span className="text-xs text-gray-400 whitespace-nowrap">
                         ⏱ {Math.max(1, Math.floor((s.time_taken ?? 0) / 60))}m

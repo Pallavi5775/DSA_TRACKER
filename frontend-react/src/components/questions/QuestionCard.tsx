@@ -1,4 +1,4 @@
-import { Question } from '../../types'
+﻿import { Question } from '../../types'
 import Badge from '../shared/Badge'
 import AccuracyBar from '../shared/AccuracyBar'
 
@@ -15,15 +15,15 @@ export default function QuestionCard({ question: q, isActive, onPractice, onLast
   const nextRev = q.next_revision && q.next_revision !== '9999-12-31' ? q.next_revision : '—'
   const isDue = nextRev !== '—' && nextRev <= today
 
-  const accColor = acc >= 80 ? '#16a34a' : acc >= 60 ? '#d97706' : '#b5615a'
+  const accColor = acc >= 80 ? '#16a34a' : acc >= 60 ? '#d97706' : '#be123c'
   const accBg = acc >= 80 ? '#dcfce7' : acc >= 60 ? '#fef3c7' : '#fde8e3'
 
   return (
     <div
       className={`bg-white border rounded-2xl p-4 mb-2.5 transition-shadow ${
         isActive
-          ? 'border-rose-500 shadow-md shadow-rose-100'
-          : 'border-rose-200 hover:border-rose-300 shadow-sm hover:shadow-md'
+          ? 'border-rose-600 shadow-md shadow-rose-200'
+          : 'border-rose-300 hover:border-rose-400 shadow-sm hover:shadow-md'
       }`}
     >
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -59,7 +59,7 @@ export default function QuestionCard({ question: q, isActive, onPractice, onLast
           <button
             onClick={onPractice}
             className="px-3 py-1 rounded-lg text-xs font-bold text-white transition-colors"
-            style={{ background: isActive ? '#b5615a' : 'linear-gradient(135deg,#c97b6e,#b5615a)' }}
+            style={{ background: isActive ? '#be123c' : 'linear-gradient(135deg,#e11d48,#be123c)' }}
           >
             Practice →
           </button>
