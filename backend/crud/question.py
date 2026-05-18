@@ -799,14 +799,14 @@ async def hint_chat(
     return {"reply": reply, "is_variation": generate_variations}
 
 
-async def get_all_pattern_notes(db: AsyncSession, user_id: int) -> dict:
+async def get_all_pattern_notes(db: AsyncSession, user_id: int) -> list:
     rows = (await db.execute(
         select(UserPatternNote).where(UserPatternNote.user_id == user_id)
     )).scalars().all()
-    return {
-        row.pattern: {"notes": row.notes or "", "memory_techniques": row.memory_techniques or ""}
+    return [
+        {"pattern": row.pattern, "notes": row.notes or "", "memory_techniques": row.memory_techniques or ""}
         for row in rows
-    }
+    ]
 
 
 async def update_pattern_note(
