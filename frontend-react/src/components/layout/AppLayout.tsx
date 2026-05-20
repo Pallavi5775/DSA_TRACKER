@@ -70,9 +70,9 @@ export default function AppLayout({ auth, onLogout }: Props) {
       <header className="bg-white border-b border-rose-300 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div>
           <h1 className="font-extrabold text-xl tracking-tight text-rose-grad leading-none">
-            🎯 DSA Revision Planner
+            🪺 AlgoNest
           </h1>
-          <p className="text-rose-400 text-xs font-medium">Track · Practice · Master</p>
+          <p className="text-rose-400 text-xs font-medium">Nest · Practice · Master</p>
         </div>
 
         <div className="flex items-center gap-3">

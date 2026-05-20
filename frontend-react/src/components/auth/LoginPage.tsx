@@ -9,9 +9,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🎯</div>
-          <h1 className="text-2xl font-extrabold text-rose-grad mb-1">DSA Revision Planner</h1>
-          <p className="text-rose-400 text-sm">Track · Practice · Master</p>
+          <div className="text-5xl mb-3">🪺</div>
+          <h1 className="text-2xl font-extrabold text-rose-grad mb-1">AlgoNest</h1>
+          <p className="text-rose-400 text-sm">Nest · Practice · Master</p>
         </div>
 
         {authError && (
