@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPatternNotes, updatePatternNote, patternChat } from '../../api/client'
 import { PatternNote } from '../../types'
+import RichEditor from '../shared/RichEditor'
 
 const PATTERNS = [
   { id: 'Array', label: '🔢 Array' },
@@ -224,62 +225,46 @@ function PatternView({
 
       {/* Right: personal notes + AI chat */}
       <div className="space-y-4">
-        {/* My Notes — edit / rendered view toggle */}
-        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+        {/* My Notes — rich editor */}
+        <div className="bg-white border border-rose-300 rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">📝 My Notes</h3>
-            {!editMode && notes && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
-              >
-                ✏ Edit
-              </button>
-            )}
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="text-xs text-rose-500 hover:text-rose-700 font-semibold"
+            >
+              {editMode ? '👁 Preview' : '✏ Edit'}
+            </button>
           </div>
-          {editMode || !notes ? (
-            <textarea
-              value={notes}
-              onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
-              rows={6}
-              placeholder={`Your personal notes on ${pattern} pattern… (supports **bold**, *italic*, \`code\`, lists)`}
-              className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y font-mono"
+          <div className="px-2 pb-3">
+            <RichEditor
+              content={notes}
+              onChange={(html) => { setNotes(html); setDirty(true) }}
+              placeholder={`Write your notes on ${pattern}… use the toolbar for formatting`}
+              editable={editMode}
             />
-          ) : (
-            <div
-              className="prose prose-sm max-w-none space-y-1 text-gray-700"
-              dangerouslySetInnerHTML={{ __html: renderMd(notes) }}
-            />
-          )}
+          </div>
         </div>
 
-        {/* Memory Techniques — edit / rendered view toggle */}
-        <div className="bg-white border border-rose-300 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+        {/* Memory Techniques — rich editor */}
+        <div className="bg-white border border-rose-300 rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">🧠 Memory Techniques</h3>
-            {!editMode && memo && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
-              >
-                ✏ Edit
-              </button>
-            )}
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="text-xs text-rose-500 hover:text-rose-700 font-semibold"
+            >
+              {editMode ? '👁 Preview' : '✏ Edit'}
+            </button>
           </div>
-          {editMode || !memo ? (
-            <textarea
-              value={memo}
-              onChange={(e) => { setMemo(e.target.value); setDirty(true) }}
-              rows={4}
-              placeholder="Mnemonics, stories, or memory tricks… (supports **bold**, lists)"
-              className="w-full border border-rose-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-rose-600 resize-y font-mono"
+          <div className="px-2 pb-3">
+            <RichEditor
+              content={memo}
+              onChange={(html) => { setMemo(html); setDirty(true) }}
+              placeholder="Write mnemonics, stories, or memory tricks…"
+              editable={editMode}
             />
-          ) : (
-            <div
-              className="prose prose-sm max-w-none space-y-1 text-gray-700"
-              dangerouslySetInnerHTML={{ __html: renderMd(memo) }}
-            />
-          )}
+          </div>
         </div>
 
         {dirty && (

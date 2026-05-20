@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── TipTap Rich Editor ────────────────────────────────────────────────────── */
+.rich-editor .tiptap {
+  @apply px-4 py-3 text-sm text-gray-800 leading-relaxed outline-none;
+}
+.rich-editor .tiptap p { @apply mb-2; }
+.rich-editor .tiptap h2 { @apply text-base font-bold text-rose-700 mt-4 mb-1 border-b border-rose-200 pb-0.5; }
+.rich-editor .tiptap h3 { @apply text-sm font-semibold text-rose-600 mt-3 mb-1; }
+.rich-editor .tiptap strong { @apply font-bold; }
+.rich-editor .tiptap em { @apply italic; }
+.rich-editor .tiptap u { @apply underline; }
+.rich-editor .tiptap s { @apply line-through text-gray-400; }
+.rich-editor .tiptap ul { @apply list-disc pl-5 mb-2 space-y-0.5; }
+.rich-editor .tiptap ol { @apply list-decimal pl-5 mb-2 space-y-0.5; }
+.rich-editor .tiptap li { @apply leading-relaxed; }
+.rich-editor .tiptap blockquote { @apply border-l-4 border-rose-300 pl-3 italic text-gray-500 my-2; }
+.rich-editor .tiptap code { @apply bg-gray-100 text-rose-600 px-1 py-0.5 rounded text-[12px] font-mono; }
+.rich-editor .tiptap pre { @apply bg-gray-900 text-green-300 rounded-xl p-4 overflow-x-auto font-mono text-xs my-3 leading-relaxed; }
+.rich-editor .tiptap pre code { @apply bg-transparent text-inherit p-0 text-xs; }
+.rich-editor .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply text-gray-400 float-left h-0 pointer-events-none;
+}
+
 @layer base {
   html, body {
     @apply bg-cream font-sans;
