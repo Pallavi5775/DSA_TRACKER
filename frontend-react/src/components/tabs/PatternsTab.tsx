@@ -129,6 +129,8 @@ function PatternView({
   const [memo, setMemo] = useState(note.memory_techniques ?? '')
   const [dirty, setDirty] = useState(false)
   const [editMode, setEditMode] = useState(!note.notes)
+  const [notesOpen, setNotesOpen] = useState(true)
+  const [memoOpen, setMemoOpen] = useState(true)
   const [chatHistory, setChatHistory] = useState<ChatMsg[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
@@ -225,46 +227,66 @@ function PatternView({
 
       {/* Right: personal notes + AI chat */}
       <div className="space-y-4">
-        {/* My Notes — rich editor */}
+        {/* My Notes — rich editor with collapser */}
         <div className="bg-white border border-rose-300 rounded-2xl overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-5 pt-4 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">📝 My Notes</h3>
+          <div className="flex items-center justify-between px-5 pt-4 pb-3">
             <button
-              onClick={() => setEditMode(!editMode)}
-              className="text-xs text-rose-500 hover:text-rose-700 font-semibold"
+              onClick={() => setNotesOpen((v) => !v)}
+              className="flex items-center gap-2 flex-1 text-left"
             >
-              {editMode ? '👁 Preview' : '✏ Edit'}
+              <span className="text-xs font-bold uppercase tracking-widest text-rose-600">📝 My Notes</span>
+              <span className={`text-rose-400 text-xs transition-transform duration-200 ${notesOpen ? 'rotate-180' : ''}`}>▼</span>
             </button>
+            {notesOpen && (
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="text-xs text-rose-500 hover:text-rose-700 font-semibold ml-3 flex-shrink-0"
+              >
+                {editMode ? '👁 Preview' : '✏ Edit'}
+              </button>
+            )}
           </div>
-          <div className="px-2 pb-3">
-            <RichEditor
-              content={notes}
-              onChange={(html) => { setNotes(html); setDirty(true) }}
-              placeholder={`Write your notes on ${pattern}… use the toolbar for formatting`}
-              editable={editMode}
-            />
-          </div>
+          {notesOpen && (
+            <div className="px-2 pb-3 border-t border-rose-100">
+              <RichEditor
+                content={notes}
+                onChange={(html) => { setNotes(html); setDirty(true) }}
+                placeholder={`Write your notes on ${pattern}… use the toolbar for formatting`}
+                editable={editMode}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Memory Techniques — rich editor */}
+        {/* Memory Techniques — rich editor with collapser */}
         <div className="bg-white border border-rose-300 rounded-2xl overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-5 pt-4 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-rose-600">🧠 Memory Techniques</h3>
+          <div className="flex items-center justify-between px-5 pt-4 pb-3">
             <button
-              onClick={() => setEditMode(!editMode)}
-              className="text-xs text-rose-500 hover:text-rose-700 font-semibold"
+              onClick={() => setMemoOpen((v) => !v)}
+              className="flex items-center gap-2 flex-1 text-left"
             >
-              {editMode ? '👁 Preview' : '✏ Edit'}
+              <span className="text-xs font-bold uppercase tracking-widest text-rose-600">🧠 Memory Techniques</span>
+              <span className={`text-rose-400 text-xs transition-transform duration-200 ${memoOpen ? 'rotate-180' : ''}`}>▼</span>
             </button>
+            {memoOpen && (
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="text-xs text-rose-500 hover:text-rose-700 font-semibold ml-3 flex-shrink-0"
+              >
+                {editMode ? '👁 Preview' : '✏ Edit'}
+              </button>
+            )}
           </div>
-          <div className="px-2 pb-3">
-            <RichEditor
-              content={memo}
-              onChange={(html) => { setMemo(html); setDirty(true) }}
-              placeholder="Write mnemonics, stories, or memory tricks…"
-              editable={editMode}
-            />
-          </div>
+          {memoOpen && (
+            <div className="px-2 pb-3 border-t border-rose-100">
+              <RichEditor
+                content={memo}
+                onChange={(html) => { setMemo(html); setDirty(true) }}
+                placeholder="Write mnemonics, stories, or memory tricks…"
+                editable={editMode}
+              />
+            </div>
+          )}
         </div>
 
         {dirty && (
